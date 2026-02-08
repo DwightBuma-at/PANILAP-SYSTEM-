@@ -793,12 +793,12 @@
         }
 
         window.addEventListener('load', async () => {
-            // Check authorization first
-            if (!checkAuthorization()) return;
-            
-            // Update time and date immediately and every second (do this first, independent of Supabase)
+            // Update time and date immediately and every second (do this first, independent of auth)
             updateDateTime();
             setInterval(updateDateTime, 1000);
+            
+            // Check authorization
+            if (!checkAuthorization()) return;
             
             try {
                 await initSupabase();

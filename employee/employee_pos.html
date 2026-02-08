@@ -987,14 +987,14 @@
         }
 
         window.addEventListener('load', async () => {
-            // Check authorization first
+            // Update time and date immediately and every second (do this first, independent of auth)
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            // Check authorization
             if (!checkAuthorization()) return;
             
             await initSupabase();
-            
-            // Update time and date immediately and every second
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
             
             loadMenu();
         });
