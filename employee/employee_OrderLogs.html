@@ -800,10 +800,11 @@
             // Check authorization
             if (!checkAuthorization()) return;
             
-            try {
-                await initSupabase();
-            } catch (error) {
-                console.error('Supabase initialization error:', error);
+            // Initialize Supabase with retry logic
+            const supabaseInstance = await initSupabase();
+            if (!supabaseInstance) {
+                console.error('Failed to connect to database');
+                return;
             }
 
             if (localStorage.getItem('userRole')) {

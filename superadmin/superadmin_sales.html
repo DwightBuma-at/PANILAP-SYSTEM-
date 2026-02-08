@@ -891,7 +891,12 @@
             // Check authorization first
             if (!checkAuthorization()) return;
             
-            await initSupabase();
+            // Initialize Supabase with retry logic
+            const supabaseInstance = await initSupabase();
+            if (!supabaseInstance) {
+                console.error('Failed to connect to database');
+                return;
+            }
 
             if (localStorage.getItem('userRole')) {
                 initializeDateFilter();

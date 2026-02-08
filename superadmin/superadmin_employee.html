@@ -1564,7 +1564,12 @@
             // Check authorization first
             if (!checkAuthorization()) return;
             
-            await initSupabase();
+            // Initialize Supabase with retry logic
+            const supabaseInstance = await initSupabase();
+            if (!supabaseInstance) {
+                showNotification('Error', 'Failed to connect to database. Please refresh the page.', 'error');
+                return;
+            }
             
             loadEmployeeTable();
             loadOnDutyTable();
