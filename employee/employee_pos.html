@@ -708,11 +708,29 @@
 
         // Load menu
         async function loadMenu() {
+            // Ensure Supabase is initialized
+            if (!window.supabaseInstance) {
+                console.error('[Menu] Supabase not initialized');
+                document.getElementById('menuContainer').innerHTML = '<div style="padding: 40px; text-align: center; color: #dc2626;"><i class="fas fa-exclamation-triangle" style="font-size: 32px; display: block; margin-bottom: 10px;"></i>Database connection error. Please refresh.</div>';
+                return;
+            }
+            
+            console.log('[Menu] Loading inventory...');
             const result = await getInventory();
+            console.log('[Menu] Inventory result:', result);
+            
             menuItems = result.success ? result.data : [];
             
             const menuContainer = document.getElementById('menuContainer');
             menuContainer.innerHTML = '';
+            
+            if (!result.success || menuItems.length === 0) {
+                console.warn('[Menu] No items found or error:', result.message);
+                menuContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: #cbd5e1;"><i class="fas fa-inbox" style="font-size: 32px; display: block; margin-bottom: 10px;"></i>No menu items available</div>';
+                return;
+            }
+            
+            console.log('[Menu] Found ' + menuItems.length + ' items');
             
             menuItems.forEach(item => {
                 const menuCard = document.createElement('div');

@@ -527,15 +527,27 @@
         }
 
         async function loadOrdersTable() {
+            // Ensure Supabase is initialized
+            if (!window.supabaseInstance) {
+                console.error('[Orders] Supabase not initialized');
+                const table = document.getElementById('ordersTable');
+                table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #dc2626;"><i class="fas fa-exclamation-triangle" style="font-size: 28px; display: block; margin-bottom: 10px;"></i>Database connection error. Please refresh the page.</td></tr>';
+                return;
+            }
+            
             // Get transactions from Supabase
             const currentEmployee = localStorage.getItem('currentEmployee') || localStorage.getItem('userName') || 'Employee';
+            console.log('[Orders] Loading for employee:', currentEmployee);
             
             const dateFilter = document.getElementById('dateFilter').value;
             const result = await getTransactionsByDate(dateFilter);
+            console.log('[Orders] Transactions result:', result);
+            
             const allTransactions = result.success ? result.data : [];
             
             // Filter by current employee
             const orders = allTransactions.filter(t => t.employee === currentEmployee);
+            console.log('[Orders] Found ' + orders.length + ' orders for this employee');
             
             const dateFilterValue = document.getElementById('dateFilter').value;
             const table = document.getElementById('ordersTable');
