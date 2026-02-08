@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Panilap Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../database/config.js"></script>
+    <script src="../../database/services.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            display: flex;
+            overflow-x: hidden;
+        }
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .sidebar-title i {
+            color: #dc2626;
+            font-size: 20px;
+        }
+        .sidebar-nav {
+            padding: 12px;
+            flex: 1;
+        }
+        .nav-item {
+            padding: 12px 14px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            width: 100%;
+            text-align: left;
+            font-size: 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .nav-item.active {
+            background: #fee2e2;
+            color: #dc2626;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .logout-btn {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 10px 14px;
+            font-size: 16px;
+            width: 100%;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logout-btn:hover {
+            background: #fecaca;
+        }
+        /* Confirmation Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .modal-icon {
+            font-size: 48px;
+            color: #dc2626;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .modal-message {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 24px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        .modal-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-btn-cancel {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+        .modal-btn-cancel:hover {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .modal-btn-confirm {
+            background: #dc2626;
+            color: white;
+        }
+        .modal-btn-confirm:hover {
+            background: #b91c1c;
+        }
+        main {
+            position: fixed;
+            top: 0;
+            left: 320px;
+            right: 0;
+            bottom: 0;
+            width: calc(100% - 320px);
+            height: 100vh;
+            padding: 20px 30px 30px 30px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #f8fafc;
+        }
+        main > div {
+            flex-shrink: 0;
+        }
+        main > div:last-child {
+            flex: 1;
+            min-height: 0;
+        }
+        .page-header {
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-shrink: 0;
+        }
+        .page-header-left {
+            flex: 1;
+        }
+        .datetime-display {
+            text-align: center;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        .current-date {
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            text-align: center;
+        }
+        .current-time {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+        .page-subtitle {
+            font-size: 14px;
+            color: #64748b;
+        }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+            flex-shrink: 0;
+        }
+        .performance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .performance-stat {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+            transition: all 0.2s ease;
+        }
+        .performance-stat:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+        .performance-label {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 8px;
+        }
+        .performance-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #dc2626;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            padding: 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            transition: all 0.3s;
+        }
+        .metric-card:hover {
+            border-color: #dc2626;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.08);
+        }
+        .metric-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .metric-icon-sales {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .metric-icon-staff {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        .metric-icon-schedule {
+            background: #dbeafe;
+            color: #0284c7;
+        }
+        .metric-icon-stock {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .metric-content {
+            flex: 1;
+        }
+        .metric-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .metric-detail {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+        .content-card {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            padding: 24px;
+            margin-bottom: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .content-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .content-title i {
+            color: #dc2626;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .data-table thead {
+            background: #f1f5f9;
+            border-top: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .data-table th {
+            padding: 12px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 13px;
+            color: #334155;
+        }
+        .data-table tr:hover {
+            background: #f8fafc;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .badge-primary {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .badge-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .empty-state {
+            text-align: center;
+            color: #94a3b8;
+            padding: 40px 20px;
+        }
+        .empty-state i {
+            font-size: 40px;
+            color: #cbd5e1;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .empty-state p {
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-tachometer-alt"></i>
+            <span class="sidebar-title">Admin</span>
+        </div>
+        
+        <div class="sidebar-nav">
+            <button class="nav-item active" onclick="stayHere()">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('superadmin_sales.html')">
+                <i class="fas fa-chart-line"></i>
+                <span>Sales</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('superadmin_inventory.html')">
+                <i class="fas fa-boxes"></i>
+                <span>Inventory</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('superadmin_employee.html')">
+                <i class="fas fa-users"></i>
+                <span>Employee</span>
+            </button>
+        </div>
+
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </div>
+
+    <main>
+        <div class="page-header">
+            <div class="page-header-left">
+                <h1 class="page-title">Dashboard</h1>
+                <p class="page-subtitle">Overview of sales, employees, schedules and inventory</p>
+            </div>
+            <div class="datetime-display">
+                <div class="current-date" id="currentDate">-</div>
+                <div class="current-time" id="currentTime">--:--:--</div>
+            </div>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-icon metric-icon-sales">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-label">Total Sales</div>
+                    <div class="metric-value" id="totalSalesAll">₱0</div>
+                    <div class="metric-detail" id="totalSalesDetail">all transactions</div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon metric-icon-sales">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-label">Orders (Today)</div>
+                    <div class="metric-value" id="todayOrders">0</div>
+                    <div class="metric-detail">orders</div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon metric-icon-sales">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-label">Sales (Today)</div>
+                    <div class="metric-value" id="todayTotalSales">₱0</div>
+                    <div class="metric-detail" id="salesDetail">0 transactions</div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon metric-icon-stock">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-label">Low Stock Alerts</div>
+                    <div class="metric-value" id="lowStockCount">0</div>
+                    <div class="metric-detail" id="lowStockDetail">items below threshold</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Performance Section -->
+        <div style="margin-bottom: 0; flex: 1; display: flex; flex-direction: column; min-height: 0;">
+
+        <!-- Sales Chart -->
+        <div class="content-card" style="margin-bottom: 0; display: flex; flex-direction: column; flex: 1; min-height: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div class="content-title" style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">
+                    <i class="fas fa-chart-line"></i>
+                    Sales Performance by Date
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <button onclick="previousDay()" style="padding: 10px 14px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; font-size: 16px; transition: all 0.2s;">
+                            <i class="fas fa-chevron-left" style="color: #475569;"></i>
+                        </button>
+                        <div style="min-width: 180px; text-align: center; background: white; padding: 8px 14px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Date</div>
+                            <div style="font-size: 14px; font-weight: 700; color: #0f172a;" id="displayDate">-</div>
+                        </div>
+                        <button onclick="nextDay()" style="padding: 10px 14px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; font-size: 16px; transition: all 0.2s;">
+                            <i class="fas fa-chevron-right" style="color: #475569;"></i>
+                        </button>
+                    </div>
+                    <input 
+                        type="date" 
+                        id="dateFilter" 
+                        style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; font-family: inherit;"
+                    >
+                    <button onclick="resetDateFilter()" style="padding: 8px 14px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: #475569; transition: all 0.2s;">
+                        Today
+                    </button>
+                </div>
+            </div>
+            <div style="position: relative; flex: 1; min-height: 0;">
+                <canvas id="salesChart"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <script>
+
+
+        function getDayName(dayIndex) {
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            return days[dayIndex];
+        }
+
+        function updateDateTime() {
+            try {
+                const now = new Date();
+                
+                // Format date: Monday, February 06, 2026
+                const dayName = getDayName(now.getDay());
+                const monthName = now.toLocaleString('en-US', { month: 'long' });
+                const date = now.getDate().toString().padStart(2, '0');
+                const year = now.getFullYear();
+                
+                const dateStr = `${dayName}, ${monthName} ${date}, ${year}`;
+                
+                // Format time: 14:30:45
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                
+                const timeStr = `${hours}:${minutes}:${seconds}`;
+                
+                const dateEl = document.getElementById('currentDate');
+                const timeEl = document.getElementById('currentTime');
+                
+                if (dateEl) dateEl.textContent = dateStr;
+                if (timeEl) timeEl.textContent = timeStr;
+            } catch (error) {
+                console.error('Error updating date/time:', error);
+            }
+        }
+
+        async function loadDashboard() {
+            await loadMetrics();
+            setTimeout(() => {
+                loadSalesChart();
+            }, 100);
+        }
+
+        let salesChartInstance = null;
+
+        function updateDisplayDate() {
+            const dateFilterInput = document.getElementById('dateFilter');
+            const selectedDate = dateFilterInput.value;
+            const date = new Date(selectedDate + 'T00:00:00');
+            const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+            const formattedDate = date.toLocaleDateString('en-US', options);
+            document.getElementById('displayDate').textContent = formattedDate;
+        }
+
+        function previousDay() {
+            const dateFilterInput = document.getElementById('dateFilter');
+            const currentDate = new Date(dateFilterInput.value + 'T00:00:00');
+            currentDate.setDate(currentDate.getDate() - 1);
+            const dateStr = currentDate.toISOString().split('T')[0];
+            dateFilterInput.value = dateStr;
+            updateDisplayDate();
+            loadSalesChart();
+        }
+
+        function nextDay() {
+            const dateFilterInput = document.getElementById('dateFilter');
+            const currentDate = new Date(dateFilterInput.value + 'T00:00:00');
+            currentDate.setDate(currentDate.getDate() + 1);
+            const dateStr = currentDate.toISOString().split('T')[0];
+            dateFilterInput.value = dateStr;
+            updateDisplayDate();
+            loadSalesChart();
+        }
+
+        async function loadSalesChart() {
+            const salesResult = await getAllTransactions();
+            const sales = salesResult.success ? salesResult.data : [];
+            const dateFilterInput = document.getElementById('dateFilter');
+            const selectedDate = dateFilterInput.value;
+
+            // Set today's date as default if not set
+            if (!dateFilterInput.value) {
+                const today = new Date();
+                const dateStr = today.toISOString().split('T')[0];
+                dateFilterInput.value = dateStr;
+                updateDisplayDate();
+            }
+
+            // Filter sales by selected date
+            let filteredSales = sales;
+            if (selectedDate) {
+                filteredSales = sales.filter(s => s.date === selectedDate);
+            }
+
+            // Group sales by date and sum amounts
+            const salesByDate = {};
+            const dateOrder = {};
+            
+            filteredSales.forEach(s => {
+                const date = s.date || 'Unknown';
+                if (!salesByDate[date]) {
+                    salesByDate[date] = 0;
+                    dateOrder[date] = new Date(date).getTime();
+                }
+                salesByDate[date] += (s.amount || 0);
+            });
+
+            // Sort dates
+            const sortedDates = Object.keys(salesByDate).sort((a, b) => dateOrder[a] - dateOrder[b]);
+            
+            const labels = sortedDates.length > 0 ? sortedDates : ['No Data'];
+            const data = sortedDates.length > 0 ? sortedDates.map(d => salesByDate[d]) : [0];
+
+            const ctx = document.getElementById('salesChart').getContext('2d');
+
+            // Destroy existing chart if it exists
+            if (salesChartInstance) {
+                salesChartInstance.destroy();
+            }
+
+            salesChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Daily Sales (₱)',
+                        data: data,
+                        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                        borderColor: '#dc2626',
+                        borderWidth: 3,
+                        borderRadius: 6,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 6,
+                        pointBackgroundColor: '#dc2626',
+                        pointBorderColor: 'white',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 13,
+                                    weight: 600
+                                },
+                                color: '#475569',
+                                padding: 16,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: Math.max(...data) > 0 ? Math.max(...data) * 1.1 : 10000,
+                            ticks: {
+                                font: {
+                                    size: 12
+                                },
+                                color: '#94a3b8',
+                                callback: function(value) {
+                                    return '₱' + value.toLocaleString('en-PH');
+                                }
+                            },
+                            grid: {
+                                color: '#f1f5f9',
+                                drawBorder: false,
+                                drawTicks: false
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                    weight: 500
+                                },
+                                color: '#475569'
+                            },
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function resetDateFilter() {
+            const today = new Date();
+            const dateStr = today.toISOString().split('T')[0];
+            document.getElementById('dateFilter').value = dateStr;
+            updateDisplayDate();
+            loadSalesChart();
+        }
+
+        async function loadMetrics() {
+            try {
+                // Get sales data from Supabase
+                const salesResult = await getAllTransactions();
+                const sales = salesResult.success ? salesResult.data : [];
+                
+                // Get inventory data from Supabase
+                const inventoryResult = await getInventory();
+                const inventory = inventoryResult.success ? inventoryResult.data : [];
+
+                // Total Sales (All Time)
+                let totalSales = 0;
+                sales.forEach(s => {
+                    totalSales += (s.amount || 0);
+                });
+                document.getElementById('totalSalesAll').textContent = '₱' + totalSales.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                document.getElementById('totalSalesDetail').textContent = sales.length + ' transactions';
+
+                // Today's Performance
+                const today = new Date();
+                const todayStr = today.getFullYear() + '-' + 
+                               String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                               String(today.getDate()).padStart(2, '0');
+                
+                const todayTransactions = sales.filter(s => s.date === todayStr);
+                const ordersCount = todayTransactions.length;
+                const totalSalesToday = todayTransactions.reduce((sum, s) => sum + (s.amount || 0), 0);
+                
+                document.getElementById('todayOrders').textContent = ordersCount;
+                document.getElementById('todayTotalSales').textContent = '₱' + totalSalesToday.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                document.getElementById('salesDetail').textContent = ordersCount + ' transactions';
+
+                // Low Stock Count (items with quantity <= 30)
+                const lowStockItems = inventory.filter(item => item.quantity <= 30);
+                document.getElementById('lowStockCount').textContent = lowStockItems.length;
+                document.getElementById('lowStockDetail').textContent = 'items below threshold';
+
+                // Load Today's Performance
+                await loadTodayPerformance();
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+            }
+        }
+
+        async function loadTodayPerformance() {
+            try {
+                // Get sales data from Supabase
+                const salesResult = await getAllTransactions();
+                const sales = salesResult.success ? salesResult.data : [];
+                
+                const today = new Date();
+                const todayStr = today.getFullYear() + '-' + 
+                               String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                               String(today.getDate()).padStart(2, '0');
+                
+                // Filter today's transactions
+                const todayTransactions = sales.filter(s => s.date === todayStr);
+                
+                // Calculate today's stats
+                const ordersCount = todayTransactions.length;
+                const totalSalesToday = todayTransactions.reduce((sum, s) => sum + (s.amount || 0), 0);
+                
+                // Calculate all-time total sales
+                const totalSalesAll = sales.reduce((sum, s) => sum + (s.amount || 0), 0);
+                
+                // Update display
+                document.getElementById('totalSalesAll').textContent = '₱' + totalSalesAll.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                document.getElementById('totalSalesDetail').textContent = sales.length + ' transactions';
+                document.getElementById('todayOrders').textContent = ordersCount;
+                document.getElementById('todayTotalSales').textContent = '₱' + totalSalesToday.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                document.getElementById('salesDetail').textContent = ordersCount + ' transactions';
+            } catch (error) {
+                console.error('Error loading today performance:', error);
+            }
+        }
+
+        function stayHere() {
+            // Already on this page
+        }
+
+        function navigateTo(page) {
+            window.location.href = page;
+        }
+
+        function logout() {
+            document.getElementById('logoutModal').classList.add('active');
+        }
+
+        function confirmLogout() {
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
+            window.location.href = '../index.html';
+        }
+
+        function cancelLogout() {
+            document.getElementById('logoutModal').classList.remove('active');
+        }
+
+        // Authorization check function
+        function checkAuthorization() {
+            const userRole = localStorage.getItem('userRole');
+            
+            // If no user role is stored, redirect to login
+            if (!userRole) {
+                window.location.href = '../index.html';
+                return false;
+            }
+            
+            // Check if user role is 'admin', if not, redirect to login
+            if (userRole !== 'admin') {
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('userName');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('currentEmployee');
+                window.location.href = '../index.html';
+                return false;
+            }
+            
+            return true;
+        }
+
+        window.addEventListener('load', async () => {
+            // Check authorization first
+            if (!checkAuthorization()) return;
+            
+            await initSupabase();
+            
+            // Update time and date immediately and every second
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            if (localStorage.getItem('userRole')) {
+                // Initialize date filter before loading chart
+                const today = new Date();
+                const dateStr = today.toISOString().split('T')[0];
+                document.getElementById('dateFilter').value = dateStr;
+                updateDisplayDate();
+                
+                // Add date filter change listener
+                document.getElementById('dateFilter').addEventListener('change', loadSalesChart);
+                
+                loadDashboard();
+            }
+        });
+    </script>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+            <div class="modal-title">Logout Confirmation</div>
+            <div class="modal-message">Are you sure you want to logout? You will need to log in again to access the dashboard.</div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="cancelLogout()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmLogout()">Logout</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

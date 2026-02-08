@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales - Panilap Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../database/config.js"></script>
+    <script src="../../database/services.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            display: flex;
+            overflow-x: hidden;
+            overflow-y: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .sidebar-title i {
+            color: #dc2626;
+            font-size: 20px;
+        }
+        .sidebar-nav {
+            padding: 12px;
+            flex: 1;
+        }
+        .nav-item {
+            padding: 12px 14px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            width: 100%;
+            text-align: left;
+            font-size: 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .nav-item.active {
+            background: #fee2e2;
+            color: #dc2626;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .logout-btn {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 10px 14px;
+            font-size: 16px;
+            width: 100%;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logout-btn:hover {
+            background: #fecaca;
+            color: #b91c1c;
+        }
+        /* Confirmation Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .modal-icon {
+            font-size: 48px;
+            color: #dc2626;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .modal-message {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 24px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        .modal-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-btn-cancel {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+        .modal-btn-cancel:hover {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .modal-btn-confirm {
+            background: #dc2626;
+            color: white;
+        }
+        .modal-btn-confirm:hover {
+            background: #b91c1c;
+        }
+        /* Notification Modal */
+        #notificationModal {
+            z-index: 3000 !important;
+        }
+        .notification-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            animation: slideIn 0.3s ease;
+        }
+        .notification-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .notification-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+        .notification-message {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .notification-button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .notification-button.success {
+            background: #d1fae5;
+            color: #059669;
+        }
+        .notification-button.success:hover {
+            background: #a7f3d0;
+        }
+        .notification-button.error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .notification-button.error:hover {
+            background: #fecaca;
+        }
+        .notification-button.warning {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        .notification-button.warning:hover {
+            background: #fed7aa;
+        }
+        .notification-button.info {
+            background: #dbeafe;
+            color: #0284c7;
+        }
+        .notification-button.info:hover {
+            background: #bfdbfe;
+        }
+        main {
+            margin-left: 320px;
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow-y: hidden;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+        .page-subtitle {
+            font-size: 14px;
+            color: #64748b;
+        }
+        .datetime-display {
+            text-align: center;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        .current-date {
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            text-align: center;
+        }
+        .current-time {
+            font-size: 28px;
+            color: #0f172a;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+        .content-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            height: calc(100vh - 250px);
+        }
+        .content-card .data-table {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .content-title {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .content-title i {
+            color: #dc2626;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            height: 100%;
+        }
+        .data-table thead {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+        }
+        .data-table tbody {
+            display: block;
+            overflow-y: auto;
+            flex: 1;
+            width: 100%;
+            scrollbar-width: thin;
+            scrollbar-color: #d1d5db #f3f4f6;
+        }
+        .data-table tbody::-webkit-scrollbar {
+            width: 8px;
+        }
+        .data-table tbody::-webkit-scrollbar-track {
+            background: #f3f4f6;
+            border-radius: 4px;
+        }
+        .data-table tbody::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+        .data-table tbody::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+        .data-table thead th {
+            background: #f8fafc;
+            padding: 12px 20px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .data-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s;
+        }
+        .data-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        .data-table tbody td {
+            padding: 14px 20px;
+            font-size: 14px;
+            color: #475569;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .badge-success {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        /* Button Styles */
+        .control-button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .btn-back {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .btn-back:hover {
+            background: #fecaca;
+            color: #b91c1c;
+            transform: translateX(-2px);
+        }
+        .btn-next {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .btn-next:hover {
+            background: #fecaca;
+            color: #b91c1c;
+            transform: translateX(2px);
+        }
+        .btn-today {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+        .btn-today:hover {
+            background: #bfdbfe;
+            color: #1d4ed8;
+            transform: scale(1.05);
+        }
+        .btn-print {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .btn-print:hover {
+            background: #bbf7d0;
+            color: #166534;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-tachometer-alt"></i>
+            <span class="sidebar-title">Admin</span>
+        </div>
+        
+        <div class="sidebar-nav">
+            <button class="nav-item" onclick="navigateTo('superadmin_dashboard.html')">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </button>
+            <button class="nav-item active" onclick="navigateTo('superadmin_sales.html')">
+                <i class="fas fa-chart-line"></i>
+                <span>Sales</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('superadmin_inventory.html')">
+                <i class="fas fa-boxes"></i>
+                <span>Inventory</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('superadmin_employee.html')">
+                <i class="fas fa-users"></i>
+                <span>Employee</span>
+            </button>
+        </div>
+
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </div>
+
+    <main>
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Sales Management</h1>
+                <p class="page-subtitle">Track and manage all sales transactions</p>
+            </div>
+            <div class="datetime-display">
+                <div class="current-date" id="currentDate">-</div>
+                <div class="current-time" id="currentTime">--:--:--</div>
+            </div>
+        </div>
+
+        <!-- Sales Table -->
+        <div class="content-card">
+            <div class="content-title">
+                <i class="fas fa-receipt"></i>
+                Sales Transactions
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Employee</th>
+                        <th>Items Ordered</th>
+                        <th style="text-align: center;">Quantity</th>
+                        <th style="text-align: center;">Item Total</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="salesTable"></tbody>
+            </table>
+            
+            <!-- Date Navigation Controls -->
+            <div style="display: flex; align-items: center; gap: 12px; margin-top: 20px; padding: 0 16px 16px;">
+                <button onclick="previousDay()" class="control-button btn-back">
+                    <i class="fas fa-chevron-left"></i> Back
+                </button>
+                <div style="padding: 8px 16px; background: #f1f5f9; border-radius: 4px; border: 1px solid #e2e8f0; min-width: 150px; text-align: center;">
+                    <input type="hidden" id="dateFilter" value="">
+                    <span id="displayDate" style="font-weight: 600; color: #0f172a; font-size: 14px;">-</span>
+                </div>
+                <button id="nextBtn" onclick="nextDay()" class="control-button btn-next">
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+                <button onclick="goToday()" class="control-button btn-today">
+                    <i class="fas fa-calendar-day"></i> Today
+                </button>
+                <button onclick="printRecords()" class="control-button btn-print" style="margin-left: auto;">
+                    <i class="fas fa-print"></i> Print Records
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+
+
+        // Notification system
+        function showNotification(title, message, type = 'info') {
+            const modal = document.getElementById('notificationModal');
+            const titleEl = document.getElementById('notificationTitle');
+            const messageEl = document.getElementById('notificationMessage');
+            const iconEl = document.getElementById('notificationIcon');
+            const btnEl = document.getElementById('notificationButton');
+            
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            
+            const iconMap = {
+                'success': 'fa-check-circle',
+                'error': 'fa-times-circle',
+                'warning': 'fa-exclamation-circle',
+                'info': 'fa-info-circle'
+            };
+            
+            const colorMap = {
+                'success': '#10b981',
+                'error': '#ef4444',
+                'warning': '#f59e0b',
+                'info': '#3b82f6'
+            };
+            
+            iconEl.className = 'notification-icon fas ' + (iconMap[type] || iconMap['info']);
+            iconEl.style.color = colorMap[type] || colorMap['info'];
+            btnEl.className = 'notification-button ' + type;
+            modal.classList.add('active');
+        }
+
+        function closeNotification() {
+            document.getElementById('notificationModal').classList.remove('active');
+        }
+
+        function getDayName(dayIndex) {
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            return days[dayIndex];
+        }
+
+        function updateDateTime() {
+            try {
+                const now = new Date();
+                
+                const dayName = getDayName(now.getDay());
+                const monthName = now.toLocaleString('en-US', { month: 'long' });
+                const date = now.getDate().toString().padStart(2, '0');
+                const year = now.getFullYear();
+                
+                const dateStr = `${dayName}, ${monthName} ${date}, ${year}`;
+                
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                
+                const timeStr = `${hours}:${minutes}:${seconds}`;
+                
+                const dateEl = document.getElementById('currentDate');
+                const timeEl = document.getElementById('currentTime');
+                
+                if (dateEl) dateEl.textContent = dateStr;
+                if (timeEl) timeEl.textContent = timeStr;
+            } catch (error) {
+                console.error('Error updating date/time:', error);
+            }
+        }
+
+        async function loadSalesTable() {
+            // Load transactions from Supabase
+            const dateFilter = document.getElementById('dateFilter').value;
+            const result = await getTransactionsByDate(dateFilter);
+            const sales = result.success ? result.data : [];
+            
+            const table = document.getElementById('salesTable');
+
+            table.innerHTML = '';
+
+            if (sales.length === 0) {
+                table.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #cbd5e1;"><i class="fas fa-inbox" style="font-size: 28px; display: block; margin-bottom: 10px;"></i> No sales data</td></tr>';
+                return;
+            }
+
+            // Filter sales by selected date
+            const filteredSales = sales.filter(s => s.date === dateFilter);
+
+            if (filteredSales.length === 0) {
+                table.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #cbd5e1;"><i class="fas fa-inbox" style="font-size: 28px; display: block; margin-bottom: 10px;"></i> No sales for this date</td></tr>';
+                return;
+            }
+
+            // Sort sales by date and ID in descending order (latest first)
+            const sortedSales = filteredSales.sort((a, b) => {
+                const dateCompare = new Date(b.date) - new Date(a.date);
+                if (dateCompare !== 0) return dateCompare;
+                return b.id - a.id;
+            });
+
+            sortedSales.forEach(s => {
+                const row = document.createElement('tr');
+                let itemsHTML = '';
+                let quantityHTML = '';
+                let itemTotalHTML = '';
+                if (Array.isArray(s.items_detail)) {
+                    itemsHTML = s.items_detail.map(item => `${item.name} ₱${(item.price || 0).toLocaleString('en-PH')}`).join('<br>');
+                    quantityHTML = s.items_detail.map(item => `(${item.qty})`).join('<br>');
+                    itemTotalHTML = s.items_detail.map(item => `₱${((item.price * item.qty) || 0).toLocaleString('en-PH')}`).join('<br>');
+                } else {
+                    itemsHTML = s.items || 'N/A';
+                    quantityHTML = 'N/A';
+                    itemTotalHTML = 'N/A';
+                }
+                row.innerHTML = `
+                    <td>${s.date || 'N/A'} ${s.time || ''}</td>
+                    <td style="font-weight: 500;">${s.employee || 'N/A'}</td>
+                    <td>${itemsHTML}</td>
+                    <td style="text-align: center; font-weight: 500;">${quantityHTML}</td>
+                    <td style="text-align: center; color: #15803d; font-weight: 600;">${itemTotalHTML}</td>
+                    <td style="color: #15803d; font-weight: 600;">₱${(s.amount || 0).toLocaleString('en-PH')}</td>
+                `;
+                table.appendChild(row);
+            });
+        }
+
+        function stayHere() {
+            // Already on this page
+        }
+
+        function navigateTo(page) {
+            window.location.href = page;
+        }
+
+        function logout() {
+            document.getElementById('logoutModal').classList.add('active');
+        }
+
+        function confirmLogout() {
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
+            window.location.href = '../index.html';
+        }
+
+        function cancelLogout() {
+            document.getElementById('logoutModal').classList.remove('active');
+        }
+
+        function initializeDateFilter() {
+            // Set initial date to today to show current transactions
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+            document.getElementById('dateFilter').value = dateStr;
+            updateDisplayDate();
+            loadSalesTable();
+        }
+
+        function updateDisplayDate() {
+            const dateFilterInput = document.getElementById('dateFilter');
+            const dateStr = dateFilterInput.value;
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const date = new Date(year, month - 1, day);
+            
+            const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()];
+            const monthName = date.toLocaleString('en-US', { month: 'long' });
+            const formattedDay = String(day).padStart(2, '0');
+            const formattedYear = date.getFullYear();
+            
+            document.getElementById('displayDate').textContent = `${dayName}, ${monthName} ${formattedDay}, ${formattedYear}`;
+            updateButtonStates();
+        }
+
+        function updateButtonStates() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+            
+            const selectedDate = document.getElementById('dateFilter').value;
+            const nextBtn = document.getElementById('nextBtn');
+            
+            // Disable Next button if selected date is today
+            if (selectedDate === todayStr) {
+                nextBtn.disabled = true;
+                nextBtn.style.opacity = '0.5';
+                nextBtn.style.cursor = 'not-allowed';
+            } else {
+                nextBtn.disabled = false;
+                nextBtn.style.opacity = '1';
+                nextBtn.style.cursor = 'pointer';
+            }
+        }
+
+        function previousDay() {
+            const dateFilterInput = document.getElementById('dateFilter');
+            const [year, month, day] = dateFilterInput.value.split('-').map(Number);
+            const currentDate = new Date(year, month - 1, day);
+            currentDate.setDate(currentDate.getDate() - 1);
+            const newYear = currentDate.getFullYear();
+            const newMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const newDay = String(currentDate.getDate()).padStart(2, '0');
+            const dateStr = `${newYear}-${newMonth}-${newDay}`;
+            dateFilterInput.value = dateStr;
+            updateDisplayDate();
+            loadSalesTable();
+        }
+
+        function nextDay() {
+            const dateFilterInput = document.getElementById('dateFilter');
+            // Check if button is disabled
+            if (document.getElementById('nextBtn').disabled) {
+                return;
+            }
+            
+            const [year, month, day] = dateFilterInput.value.split('-').map(Number);
+            const currentDate = new Date(year, month - 1, day);
+            currentDate.setDate(currentDate.getDate() + 1);
+            const newYear = currentDate.getFullYear();
+            const newMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const newDay = String(currentDate.getDate()).padStart(2, '0');
+            const dateStr = `${newYear}-${newMonth}-${newDay}`;
+            dateFilterInput.value = dateStr;
+            updateDisplayDate();
+            loadSalesTable();
+        }
+
+        function goToday() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+            document.getElementById('dateFilter').value = dateStr;
+            updateDisplayDate();
+            loadSalesTable();
+        }
+
+        function printRecords() {
+            const selectedDate = document.getElementById('dateFilter').value;
+            const allSales = JSON.parse(localStorage.getItem('sales') || '[]');
+            const daySales = allSales.filter(sale => sale.date === selectedDate);
+            
+            if (daySales.length === 0) {
+                showNotification('No Records', 'No sales records found for this date.', 'warning');
+                return;
+            }
+            
+            const [year, month, day] = selectedDate.split('-');
+            const dateObj = new Date(year, month - 1, day);
+            const dayName = getDayName(dateObj.getDay());
+            const monthName = dateObj.toLocaleString('en-US', { month: 'long' });
+            const displayDate = dayName + ', ' + monthName + ' ' + parseInt(day) + ', ' + year;
+            
+            let totalAmount = 0;
+            daySales.forEach(sale => {
+                totalAmount += sale.amount || 0;
+            });
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF();
+                
+                pdf.setFontSize(20);
+                pdf.text('Panilap Eatery', 105, 20, { align: 'center' });
+                pdf.setFontSize(14);
+                pdf.text('Sales record (' + displayDate + ')', 105, 30, { align: 'center' });
+                
+                const tableData = [['Date', 'Employee', 'Items', 'Qty', 'Total', 'Amount']];
+                daySales.forEach(sale => {
+                    const items = sale.itemsDetail.map(item => item.name).join(', ');
+                    const total = sale.itemsDetail.reduce((sum, item) => sum + (item.qty * item.price), 0);
+                    tableData.push([
+                        sale.date,
+                        sale.employee,
+                        items.substring(0, 25),
+                        sale.quantity.toString(),
+                        total.toFixed(2),
+                        (sale.amount || 0).toFixed(2)
+                    ]);
+                });
+                
+                tableData.push(['', '', '', '', 'TOTAL:', totalAmount.toFixed(2)]);
+                
+                pdf.autoTable({
+                    head: [tableData[0]],
+                    body: tableData.slice(1),
+                    startY: 45,
+                    theme: 'grid',
+                    headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontSize: 11 },
+                    bodyStyles: { fontSize: 10 },
+                    columnStyles: {
+                        3: { halign: 'center' },
+                        4: { halign: 'right' },
+                        5: { halign: 'right' }
+                    },
+                    margin: 10
+                });
+                
+                pdf.save('Sales_Record_' + selectedDate + '.pdf');
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                showNotification('Error', 'Error generating PDF. Please try again.', 'error');
+            }
+        }
+
+        // Authorization check function
+        function checkAuthorization() {
+            const userRole = localStorage.getItem('userRole');
+            
+            // If no user role is stored, redirect to login
+            if (!userRole) {
+                window.location.href = '../../index.html';
+                return false;
+            }
+            
+            // Check if user role is 'admin', if not, redirect to login
+            if (userRole !== 'admin') {
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('userName');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('currentEmployee');
+                window.location.href = '../../index.html';
+                return false;
+            }
+            
+            return true;
+        }
+
+        window.addEventListener('load', async () => {
+            // Check authorization first
+            if (!checkAuthorization()) return;
+            
+            await initSupabase();
+            
+            // Update time and date immediately and every second
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+
+            if (localStorage.getItem('userRole')) {
+                initializeDateFilter();
+            }
+        });
+    </script>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+            <div class="modal-title">Logout Confirmation</div>
+            <div class="modal-message">Are you sure you want to logout? You will need to log in again to access the dashboard.</div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="cancelLogout()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmLogout()">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div id="notificationModal" class="modal-overlay">
+        <div class="notification-modal-content">
+            <div id="notificationIcon" class="notification-icon"></div>
+            <div id="notificationTitle" class="notification-title"></div>
+            <div id="notificationMessage" class="notification-message"></div>
+            <button id="notificationButton" class="notification-button" onclick="closeNotification()">OK</button>
+        </div>
+    </div>
+
+</body>
+</html>

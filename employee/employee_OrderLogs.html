@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Logs - Panilap Employee</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../database/config.js"></script>
+    <script src="../../database/services.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            display: flex;
+            overflow-x: hidden;
+            overflow-y: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .sidebar-title i {
+            color: #dc2626;
+            font-size: 20px;
+        }
+        .sidebar-nav {
+            padding: 12px;
+            flex: 1;
+        }
+        .nav-item {
+            padding: 12px 14px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            width: 100%;
+            text-align: left;
+            font-size: 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .nav-item.active {
+            background: #fee2e2;
+            color: #dc2626;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .logout-btn {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 10px 14px;
+            font-size: 16px;
+            width: 100%;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logout-btn:hover {
+            background: #fecaca;
+            color: #b91c1c;
+        }
+        /* Confirmation Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none !important;
+        }
+        .modal-overlay.active {
+            display: flex;
+            pointer-events: auto;
+            z-index: 1100;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease;
+            z-index: 1101;
+            position: relative;
+            pointer-events: auto;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .modal-icon {
+            font-size: 48px;
+            color: #dc2626;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .modal-message {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 24px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        .modal-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-btn-cancel {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+        .modal-btn-cancel:hover {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .modal-btn-confirm {
+            background: #dc2626;
+            color: white;
+        }
+        .modal-btn-confirm:hover {
+            background: #b91c1c;
+        }
+        main {
+            margin-left: 320px;
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow-y: hidden;
+            background: #f8fafc;
+        }
+        main > div {
+            flex-shrink: 0 !important;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+            flex-shrink: 0 !important;
+        }
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+        .page-subtitle {
+            font-size: 14px;
+            color: #64748b;
+        }
+        .datetime-display {
+            text-align: center;
+            background: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            pointer-events: none;
+            min-width: 200px;
+        }
+        .current-date {
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            text-align: center;
+        }
+        .current-time {
+            font-size: 24px;
+            color: #0f172a;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+        .content-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            height: calc(100vh - 250px);
+        }
+        .content-card .data-table {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .content-title {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .content-title i {
+            color: #dc2626;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            height: 100%;
+        }
+        .data-table thead {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+        }
+        .data-table tbody {
+            display: block;
+            overflow-y: auto;
+            flex: 1;
+            width: 100%;
+            scrollbar-width: thin;
+            scrollbar-color: #d1d5db #f3f4f6;
+        }
+        .data-table tbody::-webkit-scrollbar {
+            width: 8px;
+        }
+        .data-table tbody::-webkit-scrollbar-track {
+            background: #f3f4f6;
+            border-radius: 4px;
+        }
+        .data-table tbody::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+        .data-table tbody::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+        .data-table thead th {
+            background: #f8fafc;
+            padding: 12px 20px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .data-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s;
+        }
+        .data-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        .data-table tbody td {
+            padding: 14px 20px;
+            font-size: 14px;
+            color: #475569;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .badge-success {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        /* Button Styles */
+        .control-button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .btn-back {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .btn-back:hover {
+            background: #fecaca;
+            color: #b91c1c;
+            transform: translateX(-2px);
+        }
+        .btn-next {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .btn-next:hover {
+            background: #fecaca;
+            color: #b91c1c;
+            transform: translateX(2px);
+        }
+        .btn-today {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+        .btn-today:hover {
+            background: #bfdbfe;
+            color: #1d4ed8;
+            transform: scale(1.05);
+        }
+        .btn-print {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .btn-print:hover {
+            background: #bbf7d0;
+            color: #166534;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-user-tie"></i>
+            <span class="sidebar-title">Employee</span>
+        </div>
+        
+        <div class="sidebar-nav">
+            <button class="nav-item" onclick="navigateTo('employee_dashboard.html')">
+                <i class="fas fa-home"></i>
+                <span>Dashboard</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('employee_pos.html')">
+                <i class="fas fa-cash-register"></i>
+                <span>POS</span>
+            </button>
+            <button class="nav-item active" onclick="navigateTo('employee_OrderLogs.html')">
+                <i class="fas fa-receipt"></i>
+                <span>Order Logs</span>
+            </button>
+        </div>
+
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </div>
+
+    <main>
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Order Logs</h1>
+                <p class="page-subtitle">View and manage your order transactions</p>
+            </div>
+            <div class="datetime-display">
+                <div class="current-date" id="currentDate">-</div>
+                <div class="current-time" id="currentTime">--:--:--</div>
+            </div>
+        </div>
+
+        <!-- Order Logs Table -->
+        <div class="content-card">
+            <div class="content-title">
+                <i class="fas fa-receipt"></i>
+                Order Transactions
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Items Ordered</th>
+                        <th style="text-align: center;">Quantity</th>
+                        <th style="text-align: center;">Item Total</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTable"></tbody>
+            </table>
+            
+            <!-- Date Navigation Controls -->
+            <div style="display: flex; align-items: center; justify-content: flex-start; gap: 16px; margin-top: 20px; padding: 16px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; flex-wrap: wrap;">
+                <button onclick="previousDay()" class="control-button btn-back">
+                    <i class="fas fa-chevron-left"></i> Back
+                </button>
+                <div style="padding: 10px 20px; background: white; border-radius: 6px; border: 1px solid #e2e8f0; min-width: 180px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <input type="hidden" id="dateFilter" value="">
+                    <span id="displayDate" style="font-weight: 600; color: #0f172a; font-size: 14px;">-</span>
+                </div>
+                <button id="nextBtn" onclick="nextDay()" class="control-button btn-next">
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+                <button onclick="goToday()" class="control-button btn-today">
+                    <i class="fas fa-calendar-day"></i> Today
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+
+        function navigateTo(page) {
+            window.location.href = page;
+        }
+
+        function getDayName(dayIndex) {
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            return days[dayIndex];
+        }
+
+        function updateDateTime() {
+            try {
+                const now = new Date();
+                
+                const dayName = getDayName(now.getDay());
+                const monthName = now.toLocaleString('en-US', { month: 'long' });
+                const date = now.getDate().toString().padStart(2, '0');
+                const year = now.getFullYear();
+                
+                const dateStr = `${dayName}, ${monthName} ${date}, ${year}`;
+                
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                
+                const timeStr = `${hours}:${minutes}:${seconds}`;
+                
+                const dateEl = document.getElementById('currentDate');
+                const timeEl = document.getElementById('currentTime');
+                
+                if (dateEl) dateEl.textContent = dateStr;
+                if (timeEl) timeEl.textContent = timeStr;
+            } catch (error) {
+                console.error('Error updating date/time:', error);
+            }
+        }
+
+        async function loadOrdersTable() {
+            // Get transactions from Supabase
+            const currentEmployee = localStorage.getItem('currentEmployee') || localStorage.getItem('userName') || 'Employee';
+            
+            const dateFilter = document.getElementById('dateFilter').value;
+            const result = await getTransactionsByDate(dateFilter);
+            const allTransactions = result.success ? result.data : [];
+            
+            // Filter by current employee
+            const orders = allTransactions.filter(t => t.employee === currentEmployee);
+            
+            const dateFilterValue = document.getElementById('dateFilter').value;
+            const table = document.getElementById('ordersTable');
+
+            table.innerHTML = '';
+
+            if (orders.length === 0) {
+                table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #cbd5e1;"><i class="fas fa-inbox" style="font-size: 28px; display: block; margin-bottom: 10px;"></i> No order data</td></tr>';
+                return;
+            }
+
+            // Filter orders by selected date
+            const filteredOrders = orders.filter(o => o.date === dateFilterValue);
+
+            if (filteredOrders.length === 0) {
+                table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #cbd5e1;"><i class="fas fa-inbox" style="font-size: 28px; display: block; margin-bottom: 10px;"></i> No orders for this date</td></tr>';
+                return;
+            }
+
+            // Sort orders by date and ID in descending order (latest first)
+            const sortedOrders = filteredOrders.sort((a, b) => {
+                const dateCompare = new Date(b.date) - new Date(a.date);
+                if (dateCompare !== 0) return dateCompare;
+                return b.id - a.id;
+            });
+
+            sortedOrders.forEach(o => {
+                const row = document.createElement('tr');
+                let itemsHTML = '';
+                let quantityHTML = '';
+                let itemTotalHTML = '';
+                
+                // Handle both snake_case (from Supabase) and camelCase
+                const itemDetails = o.items_detail || o.itemsDetail || [];
+                
+                if (Array.isArray(itemDetails) && itemDetails.length > 0) {
+                    itemsHTML = itemDetails.map(item => `${item.name} ₱${(item.price || 0).toLocaleString('en-PH')}`).join('<br>');
+                    quantityHTML = itemDetails.map(item => `(${item.qty})`).join('<br>');
+                    itemTotalHTML = itemDetails.map(item => `₱${((item.price * item.qty) || 0).toLocaleString('en-PH')}`).join('<br>');
+                } else {
+                    itemsHTML = o.items || 'N/A';
+                    quantityHTML = 'N/A';
+                    itemTotalHTML = 'N/A';
+                }
+                row.innerHTML = `
+                    <td>${o.date || 'N/A'} ${o.time || ''}</td>
+                    <td>${itemsHTML}</td>
+                    <td style="text-align: center; font-weight: 500;">${quantityHTML}</td>
+                    <td style="text-align: center; color: #15803d; font-weight: 600;">${itemTotalHTML}</td>
+                    <td style="color: #15803d; font-weight: 600;">₱${(o.amount || 0).toLocaleString('en-PH')}</td>
+                `;
+                table.appendChild(row);
+            });
+        }
+
+        function navigateTo(page) {
+            window.location.href = page;
+        }
+
+        function logout() {
+            document.getElementById('logoutModal').classList.add('active');
+        }
+
+        function confirmLogout() {
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
+            window.location.href = '../index.html';
+        }
+
+        function cancelLogout() {
+            document.getElementById('logoutModal').classList.remove('active');
+        }
+
+        function initializeDateFilter() {
+            // Set initial date to today
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+            document.getElementById('dateFilter').value = dateStr;
+            updateDisplayDate();
+            loadOrdersTable();
+        }
+
+        function updateDisplayDate() {
+            const dateFilterInput = document.getElementById('dateFilter');
+            const dateStr = dateFilterInput.value;
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const date = new Date(year, month - 1, day);
+            
+            const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()];
+            const monthName = date.toLocaleString('en-US', { month: 'long' });
+            const formattedDay = String(day).padStart(2, '0');
+            const formattedYear = date.getFullYear();
+            
+            document.getElementById('displayDate').textContent = `${dayName}, ${monthName} ${formattedDay}, ${formattedYear}`;
+            updateButtonStates();
+        }
+
+        function updateButtonStates() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+            
+            const selectedDate = document.getElementById('dateFilter').value;
+            const nextBtn = document.getElementById('nextBtn');
+            
+            // Disable Next button if selected date is today
+            if (selectedDate === todayStr) {
+                nextBtn.disabled = true;
+                nextBtn.style.opacity = '0.5';
+                nextBtn.style.cursor = 'not-allowed';
+            } else {
+                nextBtn.disabled = false;
+                nextBtn.style.opacity = '1';
+                nextBtn.style.cursor = 'pointer';
+            }
+        }
+
+        function previousDay() {
+            const dateFilterInput = document.getElementById('dateFilter');
+            const [year, month, day] = dateFilterInput.value.split('-').map(Number);
+            const currentDate = new Date(year, month - 1, day);
+            currentDate.setDate(currentDate.getDate() - 1);
+            const newYear = currentDate.getFullYear();
+            const newMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const newDay = String(currentDate.getDate()).padStart(2, '0');
+            const dateStr = `${newYear}-${newMonth}-${newDay}`;
+            dateFilterInput.value = dateStr;
+            updateDisplayDate();
+            loadOrdersTable();
+        }
+
+        function nextDay() {
+            const dateFilterInput = document.getElementById('dateFilter');
+            // Check if button is disabled
+            if (document.getElementById('nextBtn').disabled) {
+                return;
+            }
+            
+            const [year, month, day] = dateFilterInput.value.split('-').map(Number);
+            const currentDate = new Date(year, month - 1, day);
+            currentDate.setDate(currentDate.getDate() + 1);
+            const newYear = currentDate.getFullYear();
+            const newMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const newDay = String(currentDate.getDate()).padStart(2, '0');
+            const dateStr = `${newYear}-${newMonth}-${newDay}`;
+            dateFilterInput.value = dateStr;
+            updateDisplayDate();
+            loadOrdersTable();
+        }
+
+        function goToday() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+            document.getElementById('dateFilter').value = dateStr;
+            updateDisplayDate();
+            loadOrdersTable();
+        }
+
+        function printRecords() {
+            const selectedDate = document.getElementById('dateFilter').value;
+            const allOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+            const dayOrders = allOrders.filter(order => order.date === selectedDate);
+            
+            if (dayOrders.length === 0) {
+                alert('No order records found for this date.');
+                return;
+            }
+            
+            const [year, month, day] = selectedDate.split('-');
+            const dateObj = new Date(year, month - 1, day);
+            const dayName = getDayName(dateObj.getDay());
+            const monthName = dateObj.toLocaleString('en-US', { month: 'long' });
+            const displayDate = dayName + ', ' + monthName + ' ' + parseInt(day) + ', ' + year;
+            
+            let totalAmount = 0;
+            dayOrders.forEach(order => {
+                totalAmount += order.amount || 0;
+            });
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF();
+                
+                pdf.setFontSize(20);
+                pdf.text('Panilap Eatery', 105, 20, { align: 'center' });
+                pdf.setFontSize(14);
+                pdf.text('Order logs (' + displayDate + ')', 105, 30, { align: 'center' });
+                
+                const tableData = [['Date', 'Items', 'Qty', 'Total', 'Amount']];
+                dayOrders.forEach(order => {
+                    const items = order.itemsDetail.map(item => item.name).join(', ');
+                    const total = order.itemsDetail.reduce((sum, item) => sum + (item.qty * item.price), 0);
+                    tableData.push([
+                        order.date,
+                        items.substring(0, 25),
+                        order.quantity.toString(),
+                        total.toFixed(2),
+                        (order.amount || 0).toFixed(2)
+                    ]);
+                });
+                
+                tableData.push(['', '', '', 'TOTAL:', totalAmount.toFixed(2)]);
+                
+                pdf.autoTable({
+                    head: [tableData[0]],
+                    body: tableData.slice(1),
+                    startY: 45,
+                    theme: 'grid',
+                    headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontSize: 11 },
+                    bodyStyles: { fontSize: 10 },
+                    columnStyles: {
+                        2: { halign: 'center' },
+                        3: { halign: 'right' },
+                        4: { halign: 'right' }
+                    },
+                    margin: 10
+                });
+                
+                pdf.save('Order_Logs_' + selectedDate + '.pdf');
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                alert('Error generating PDF. Please try again.');
+            }
+        }
+
+        // Authorization check function
+        function checkAuthorization() {
+            const userRole = localStorage.getItem('userRole');
+            
+            // If no user role is stored, redirect to login
+            if (!userRole) {
+                window.location.href = '../index.html';
+                return false;
+            }
+            
+            // Check if user role is 'employee', if not, redirect to login
+            if (userRole !== 'employee') {
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('userName');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('currentEmployee');
+                window.location.href = '../index.html';
+                return false;
+            }
+            
+            return true;
+        }
+
+        window.addEventListener('load', async () => {
+            // Check authorization first
+            if (!checkAuthorization()) return;
+            
+            // Update time and date immediately and every second (do this first, independent of Supabase)
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            try {
+                await initSupabase();
+            } catch (error) {
+                console.error('Supabase initialization error:', error);
+            }
+
+            if (localStorage.getItem('userRole')) {
+                initializeDateFilter();
+            }
+        });
+    </script>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+            <div class="modal-title">Logout Confirmation</div>
+            <div class="modal-message">Are you sure you want to logout? You will need to log in again to access the dashboard.</div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="cancelLogout()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmLogout()">Logout</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

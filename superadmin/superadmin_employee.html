@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee - Panilap Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../database/config.js"></script>
+    <script src="../../database/services.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            display: flex;
+            overflow-x: hidden;
+        }
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .sidebar-title i {
+            color: #dc2626;
+            font-size: 20px;
+        }
+        .sidebar-nav {
+            padding: 12px;
+            flex: 1;
+        }
+        .nav-item {
+            padding: 12px 14px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            width: 100%;
+            text-align: left;
+            font-size: 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .nav-item.active {
+            background: #fee2e2;
+            color: #dc2626;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .logout-btn {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 10px 14px;
+            font-size: 16px;
+            width: 100%;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logout-btn:hover {
+            background: #fecaca;
+            color: #b91c1c;
+        }
+        /* Confirmation Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        #deleteEmployeeModal {
+            z-index: 2000 !important;
+        }
+        #deleteOnDutyRecordModal {
+            z-index: 2100 !important;
+        }
+        #notificationModal {
+            z-index: 3000 !important;
+        }
+        .notification-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease;
+        }
+        .notification-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .notification-icon.success {
+            color: #15803d;
+        }
+        .notification-icon.error {
+            color: #dc2626;
+        }
+        .notification-icon.warning {
+            color: #fbbf24;
+        }
+        .notification-icon.info {
+            color: #0284c7;
+        }
+        .notification-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .notification-message {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 24px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .notification-button {
+            width: 100%;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .notification-button.success {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .notification-button.success:hover {
+            background: #bbf7d0;
+        }
+        .notification-button.error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .notification-button.error:hover {
+            background: #fecaca;
+        }
+        .notification-button.warning {
+            background: #fef3c7;
+            color: #78350f;
+        }
+        .notification-button.warning:hover {
+            background: #fde68a;
+        }
+        .notification-button.info {
+            background: #dbeafe;
+            color: #0284c7;
+        }
+        .notification-button.info:hover {
+            background: #bfdbfe;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .modal-icon {
+            font-size: 48px;
+            color: #dc2626;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .modal-message {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 24px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        .modal-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-btn-cancel {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+        .modal-btn-cancel:hover {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .modal-btn-confirm {
+            background: #dc2626;
+            color: white;
+        }
+        .modal-btn-confirm:hover {
+            background: #b91c1c;
+        }
+        main {
+            position: fixed;
+            top: 0;
+            left: 320px;
+            right: 0;
+            bottom: 0;
+            width: calc(100% - 320px);
+            height: 100vh;
+            padding: 20px 30px 30px 30px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #f8fafc;
+        }
+        main > div {
+            flex-shrink: 0;
+        }
+        main > div:last-child {
+            flex: 1;
+            min-height: 0;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+        .page-subtitle {
+            font-size: 14px;
+            color: #64748b;
+        }
+        .datetime-display {
+            text-align: center;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            pointer-events: none;
+        }
+        .current-date {
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            text-align: center;
+        }
+        .current-time {
+            font-size: 28px;
+            color: #0f172a;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+        .content-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            display: flex;
+            flex-direction: column;
+            max-height: 650px;
+        }
+        .content-card .data-table {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .content-title {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .content-title i {
+            color: #dc2626;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+            table-layout: auto;
+        }
+        .data-table thead {
+            background: #f8fafc;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        .data-table tbody {
+            display: block;
+            width: 100%;
+            border-top: 1px solid #e2e8f0;
+            max-height: 250px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #d1d5db #f3f4f6;
+        }
+        #employeeTableBody {
+            max-height: none !important;
+            overflow-y: visible !important;
+            display: block !important;
+            width: 100% !important;
+        }
+        #employeeTableBody::-webkit-scrollbar {
+            display: none;
+        }
+        #employeeTableBody::-webkit-scrollbar-track {
+            display: none;
+        }
+        #employeeTableBody::-webkit-scrollbar-thumb {
+            display: none;
+        }
+        #employeeTableBody::-webkit-scrollbar-thumb:hover {
+            display: none;
+        }
+        .data-table tbody::-webkit-scrollbar {
+            width: 8px;
+        }
+        .data-table tbody::-webkit-scrollbar-track {
+            background: #f3f4f6;
+            border-radius: 4px;
+        }
+        .data-table tbody::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+        .data-table tbody::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+        .data-table thead th {
+            background: #f8fafc;
+            padding: 12px 14px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        .data-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s;
+        }
+        .data-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        .data-table td {
+            padding: 12px 14px;
+            font-size: 14px;
+            color: #475569;
+        }
+        .data-table th:nth-child(1),
+        .data-table td:nth-child(1) {
+            width: 16%;
+        }
+        .data-table th:nth-child(2),
+        .data-table td:nth-child(2) {
+            width: 16%;
+        }
+        .data-table th:nth-child(3),
+        .data-table td:nth-child(3) {
+            width: 14%;
+        }
+        .data-table th:nth-child(4),
+        .data-table td:nth-child(4) {
+            width: 18%;
+        }
+        .data-table th:nth-child(5),
+        .data-table td:nth-child(5) {
+            width: 16%;
+            text-align: center;
+        }
+        .data-table th:nth-child(6),
+        .data-table td:nth-child(6) {
+            width: 14%;
+            text-align: center;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .badge-active {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .badge-inactive {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .badge-on-duty {
+            background: #dbeafe;
+            color: #0284c7;
+        }
+        .badge-off-duty {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .btn-add {
+            background: #dcfce7;
+            color: #15803d;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        .btn-add:hover {
+            background: #bbf7d0;
+            color: #166534;
+            transform: scale(1.05);
+        }
+        /* Modal Styles */
+        .modal {
+            display: none !important;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.2s ease;
+        }
+        .modal[style*="display: flex"],
+        .modal[style*="display:flex"] {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        #viewEmployeeDetailsModal .modal-content {
+            max-width: 1200px;
+            overflow: visible;
+        }
+        #viewEmployeeDetailsModal .data-table tbody {
+            overflow: visible;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #64748b;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .close-btn:hover {
+            color: #dc2626;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            flex-shrink: 0;
+        }
+        .btn-cancel {
+            padding: 10px 20px;
+            background: #f1f5f9;
+            color: #64748b;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-cancel:hover {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .btn-submit {
+            padding: 10px 20px;
+            background: #dcfce7;
+            color: #15803d;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-delete {
+            background: #fee2e2;
+            color: #dc2626;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-delete:hover {
+            background: #fecaca;
+            color: #b91c1c;
+            transform: scale(1.05);
+        }
+        .btn-view-details {
+            background: #dbeafe;
+            color: #0284c7;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-view-details:hover {
+            background: #bfdbfe;
+            color: #0369a1;
+            transform: scale(1.05);
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            padding: 16px;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+        .pagination-btn {
+            min-width: 36px;
+            height: 36px;
+            padding: 0 8px;
+            background: white;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pagination-btn:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
+        .pagination-btn.active {
+            background: #0284c7;
+            color: white;
+            border-color: #0284c7;
+        }
+        .pagination-btn.active:hover {
+            background: #0369a1;
+            border-color: #0369a1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-tachometer-alt"></i>
+            <span class="sidebar-title">Admin</span>
+        </div>
+        
+        <div class="sidebar-nav">
+            <button class="nav-item" onclick="navigateTo('superadmin_dashboard.html')">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('superadmin_sales.html')">
+                <i class="fas fa-chart-line"></i>
+                <span>Sales</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('superadmin_inventory.html')">
+                <i class="fas fa-boxes"></i>
+                <span>Inventory</span>
+            </button>
+            <button class="nav-item active" onclick="navigateTo('superadmin_employee.html')">
+                <i class="fas fa-users"></i>
+                <span>Employee</span>
+            </button>
+        </div>
+
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </div>
+
+    <main>
+        <div class="page-header">
+            <div class="page-header-left">
+                <h1 class="page-title">Employee</h1>
+                <p class="page-subtitle">Manage and view all employees</p>
+            </div>
+            <div class="datetime-display">
+                <div class="current-date" id="currentDate">-</div>
+                <div class="current-time" id="currentTime">--:--:--</div>
+            </div>
+        </div>
+
+        <!-- On-Duty Table -->
+        <div class="content-card" style="margin-bottom: 30px;">
+            <div class="content-title">
+                <i class="fas fa-clock"></i>
+                <span>On-Duty Table</span>
+                <button class="btn-add" onclick="openOnDutyEmployeeModal()" style="margin-left: auto;">
+                    <i class="fas fa-plus"></i>
+                    Check In Employee
+                </button>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Employee Name</th>
+                        <th>Date</th>
+                        <th>Time In</th>
+                        <th>Time Out</th>
+                        <th style="text-align: center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="onDutyTableBody">
+                    <!-- On-Duty records will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Employee List Table -->
+        <div class="content-card">
+            <div class="content-title">
+                <i class="fas fa-users"></i>
+                <span>Employee List</span>
+                <div id="employeePaginationTop" class="pagination" style="margin-left: auto; margin-right: 12px; padding: 8px 12px; border: none; background: transparent; display: flex; gap: 8px; align-items: center;">
+                    <!-- Pagination buttons will be generated here -->
+                </div>
+                <button class="btn-add" onclick="openAddEmployeeModal()" style="margin-left: auto;">
+                    <i class="fas fa-plus"></i>
+                    Add New Employee
+                </button>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Lastname</th>
+                        <th>Firstname</th>
+                        <th>Position</th>
+                        <th>Contact Number</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeTableBody">
+                    <!-- Employees will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Add On-Duty Modal -->
+    <div id="addOnDutyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add On-Duty Record</h2>
+                <button class="close-btn" onclick="closeAddOnDutyModal()">&times;</button>
+            </div>
+            <div style="flex: 1; overflow-y: auto;">
+                <div class="form-group">
+                    <label>Employee</label>
+                    <select id="onDutyEmployee">
+                        <option value="">Select an employee</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="onDutyDate">
+                </div>
+                <div class="form-group">
+                    <label>Time In</label>
+                    <input type="time" id="onDutyTimeIn">
+                </div>
+                <div class="form-group">
+                    <label>Time Out</label>
+                    <input type="time" id="onDutyTimeOut">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="onDutyStatus">
+                        <option value="On-Duty">On-Duty</option>
+                        <option value="Off-Duty">Off-Duty</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="closeAddOnDutyModal()">Cancel</button>
+                <button type="button" class="btn-submit" onclick="submitAddOnDuty()">Add Record</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- On Duty Employee Modal -->
+    <div id="onDutyEmployeeModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2>Check In Employee</h2>
+                <button class="close-btn" onclick="closeOnDutyEmployeeModal()">&times;</button>
+            </div>
+            <div style="padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; flex: 1; overflow-y: auto;">
+                <!-- Left Side: Employee Selection -->
+                <div>
+                    <label style="display: block; font-weight: 600; color: #0f172a; margin-bottom: 12px; font-size: 14px;">Select Employee</label>
+                    <div id="employeeCheckboxContainer" style="border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; max-height: 350px; overflow-y: auto;">
+                        <!-- Employee radio buttons will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Right Side: Time In Only -->
+                <div style="display: flex; flex-direction: column; justify-content: flex-start;">
+                    <div style="background: #f8fafc; border-radius: 6px; padding: 20px; border: 1px solid #e2e8f0;">
+                        <h3 style="font-size: 13px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 20px;">Time In</h3>
+                        <div class="form-group" style="margin: 0;">
+                            <label style="font-size: 13px; display: block; margin-bottom: 8px;">Time <span style="color: #dc2626;">*</span></label>
+                            <input type="time" id="onDutyTimeInEmployee" placeholder="HH:MM" style="width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="closeOnDutyEmployeeModal()">Cancel</button>
+                <button type="button" class="btn-submit" onclick="submitOnDutyEmployee()">Check In</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Out Modal -->
+    <div id="timeOutModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>Time Out Employee</h2>
+                <button class="close-btn" onclick="closeTimeOutModal()">&times;</button>
+            </div>
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+                <div style="background: #f8fafc; border-radius: 6px; padding: 15px; border: 1px solid #e2e8f0;">
+                    <label style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Employee</label>
+                    <p id="timeOutEmployeeName" style="font-size: 16px; font-weight: 600; color: #0f172a; margin: 8px 0 0 0;"></p>
+                </div>
+                <div class="form-group">
+                    <label>Time Out <span style="color: #dc2626;">*</span></label>
+                    <input type="time" id="timeOutEmployeeTime" placeholder="HH:MM" style="width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+                    <input type="hidden" id="timeOutModalIndex" value="">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="closeTimeOutModal()">Cancel</button>
+                <button type="button" class="btn-submit" onclick="submitTimeOut()">Confirm Time Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Employee Details Modal -->
+    <div id="viewEmployeeDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Employee Duty Details - <span id="employeeDetailsName"></span></h2>
+                <button class="close-btn" onclick="closeViewEmployeeDetailsModal()">&times;</button>
+            </div>
+            <table class="data-table" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time In</th>
+                        <th>Time Out</th>
+                        <th>Required Hours</th>
+                        <th>Over Time Hours</th>
+                        <th>Total Hours Duty</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeDetailsTableBody">
+                    <!-- Employee duty records will be loaded here -->
+                </tbody>
+            </table>
+            <div class="modal-buttons">
+                <button type="button" class="btn-delete" onclick="removeEmployeeFromDutyHistory()" style="margin-right: auto;">
+                    <i class="fas fa-trash"></i>
+                    Remove Employee
+                </button>
+                <button type="button" class="btn-cancel" onclick="closeViewEmployeeDetailsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Employee Modal -->
+    <div id="addEmployeeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Employee</h2>
+                <button class="close-btn" onclick="closeAddEmployeeModal()">&times;</button>
+            </div>
+            <div style="padding: 15px 0; display: flex; flex-direction: column; gap: 12px;">
+                <div class="form-group">
+                    <label>Lastname</label>
+                    <input type="text" id="employeeLastname" placeholder="Enter lastname">
+                </div>
+                <div class="form-group">
+                    <label>Firstname</label>
+                    <input type="text" id="employeeFirstname" placeholder="Enter firstname">
+                </div>
+                <div class="form-group">
+                    <label>Contact Number</label>
+                    <input type="number" id="employeeContactNumber" placeholder="Enter 11-digit number" min="0" max="99999999999" inputmode="numeric">
+                </div>
+                <div class="form-group">
+                    <label>Position</label>
+                    <select id="employeePosition">
+                        <option value="">Select a position</option>
+                        <option value="Cashier">Cashier</option>
+                        <option value="Cook">Cook</option>
+                        <option value="Washer">Washer</option>
+                        <option value="Trainee">Trainee</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="closeAddEmployeeModal()">Cancel</button>
+                <button type="button" class="btn-submit" onclick="submitAddEmployee()">Add Employee</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize date and time display
+        function getDayName(dayIndex) {
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            return days[dayIndex];
+        }
+
+        function updateDateTime() {
+            try {
+                const now = new Date();
+                
+                const dayName = getDayName(now.getDay());
+                const monthName = now.toLocaleString('en-US', { month: 'long' });
+                const date = now.getDate().toString().padStart(2, '0');
+                const year = now.getFullYear();
+                
+                const dateStr = `${dayName}, ${monthName} ${date}, ${year}`;
+                
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                const timeStr = `${hours}:${minutes}:${seconds}`;
+                
+                const dateEl = document.getElementById('currentDate');
+                const timeEl = document.getElementById('currentTime');
+                
+                if (dateEl) dateEl.textContent = dateStr;
+                if (timeEl) timeEl.textContent = timeStr;
+            } catch (error) {
+                console.error('Error updating date/time:', error);
+            }
+        }
+
+        // Load and display on-duty data from localStorage
+        function loadOnDutyTable() {
+            const tbody = document.getElementById('onDutyTableBody');
+            tbody.innerHTML = '';
+            
+            const onDutyRecords = JSON.parse(localStorage.getItem('onDutyRecords')) || [];
+            
+            // Filter to only show incomplete records (no timeOut)
+            const incompleteRecords = onDutyRecords.filter(record => !record.timeOut);
+
+            if (incompleteRecords.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #cbd5e1;"><i class="fas fa-inbox" style="font-size: 20px; display: block; margin-bottom: 10px;"></i>No active check-ins</td></tr>';
+                return;
+            }
+
+            incompleteRecords.forEach((record) => {
+                // Find the actual index in the original array
+                const actualIndex = onDutyRecords.indexOf(record);
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-weight: 500; color: #0f172a;">${record.employeeName}</td>
+                        <td>${record.date}</td>
+                        <td>${record.timeIn}</td>
+                        <td>${record.timeOut || '<span style="color: #cbd5e1;">--</span>'}</td>
+                        <td style="text-align: center;">
+                            <button onclick="openTimeOutModal(${actualIndex})" style="padding: 6px 12px; background-color: #fbbf24; color: #78350f; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: background 0.2s;" onmouseover="this.style.background='#f59e0b'" onmouseout="this.style.background='#fbbf24'">Time Out</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Open Add On-Duty Modal
+        async function openAddOnDutyModal() {
+            const result = await getEmployees();
+            const employees = result.success ? result.data : [];
+            const select = document.getElementById('onDutyEmployee');
+            select.innerHTML = '<option value="">Select an employee</option>';
+            
+            employees.forEach((employee) => {
+                const optionText = `${employee.lastname}, ${employee.firstname}`;
+                const option = document.createElement('option');
+                option.value = optionText;
+                option.textContent = optionText;
+                select.appendChild(option);
+            });
+
+            // Set current date
+            const today = new Date();
+            const dateStr = today.getFullYear() + '-' + 
+                           String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                           String(today.getDate()).padStart(2, '0');
+            document.getElementById('onDutyDate').value = dateStr;
+
+            document.getElementById('addOnDutyModal').style.display = 'flex';
+        }
+
+        // Close Add On-Duty Modal
+        function closeAddOnDutyModal() {
+            document.getElementById('addOnDutyModal').style.display = 'none';
+            document.getElementById('onDutyEmployee').value = '';
+            document.getElementById('onDutyDate').value = '';
+            document.getElementById('onDutyTimeIn').value = '';
+            document.getElementById('onDutyTimeOut').value = '';
+            document.getElementById('onDutyStatus').value = 'On-Duty';
+        }
+
+        // Submit Add On-Duty Form
+        function submitAddOnDuty() {
+            const employeeName = document.getElementById('onDutyEmployee').value.trim();
+            const date = document.getElementById('onDutyDate').value;
+            const timeIn = document.getElementById('onDutyTimeIn').value;
+            const timeOut = document.getElementById('onDutyTimeOut').value;
+            const status = document.getElementById('onDutyStatus').value;
+
+            if (!employeeName || !date || !timeIn || !timeOut) {
+                showNotification('Missing Information', 'Please fill in all fields', 'warning');
+                return;
+            }
+
+            // Format date to MM/DD/YYYY
+            const dateParts = date.split('-');
+            const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
+
+            // Show confirmation message
+            showNotification('Success', `${employeeName} has been added with time in: ${timeIn} and time out: ${timeOut}`, 'success');
+            
+            closeAddOnDutyModal();
+        }
+
+        // Delete On-Duty Record
+        function deleteOnDutyRecord(index) {
+            window.onDutyRecordIndexToDelete = index;
+            document.getElementById('deleteOnDutyRecordModal').classList.add('active');
+        }
+
+        function cancelDeleteOnDutyRecord() {
+            document.getElementById('deleteOnDutyRecordModal').classList.remove('active');
+            window.onDutyRecordIndexToDelete = null;
+        }
+
+        function confirmDeleteOnDutyRecord() {
+            const index = window.onDutyRecordIndexToDelete;
+            const records = JSON.parse(localStorage.getItem('onDutyRecords')) || [];
+            records.splice(index, 1);
+            localStorage.setItem('onDutyRecords', JSON.stringify(records));
+            document.getElementById('deleteOnDutyRecordModal').classList.remove('active');
+            loadOnDutyTable();
+            showNotification('Success', 'On-duty record has been removed', 'success');
+        }
+
+        // Open On Duty Employee Modal
+        async function openOnDutyEmployeeModal() {
+            const result = await getEmployees();
+            const employees = result.success ? result.data : [];
+            const container = document.getElementById('employeeCheckboxContainer');
+            container.innerHTML = '';
+
+            if (employees.length === 0) {
+                container.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;">No employees found</p>';
+            } else {
+                employees.forEach((employee, index) => {
+                    const employeeFullName = `${employee.firstname} ${employee.lastname}`;
+                    container.innerHTML += `
+                        <div style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; transition: background 0.2s; cursor: pointer;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">
+                            <input type="radio" id="employee-${index}" name="selectedEmployee" value="${employeeFullName}" data-id="${employee.id}" style="cursor: pointer; width: 18px; height: 18px;">
+                            <label for="employee-${index}" style="cursor: pointer; flex: 1; margin: 0; display: flex; flex-direction: column; gap: 4px;">
+                                <span style="font-weight: 600; color: #0f172a; font-size: 14px;">${employeeFullName}</span>
+                                <span style="font-size: 12px; color: #64748b;">${employee.position}</span>
+                            </label>
+                        </div>
+                    `;
+                });
+            }
+
+            // Clear time inputs
+            document.getElementById('onDutyTimeInEmployee').value = '';
+            
+            document.getElementById('onDutyEmployeeModal').style.display = 'flex';
+        }
+
+        // Close On Duty Employee Modal
+        function closeOnDutyEmployeeModal() {
+            document.getElementById('onDutyEmployeeModal').style.display = 'none';
+            document.querySelectorAll('input[name="selectedEmployee"]').forEach(radio => radio.checked = false);
+            document.getElementById('onDutyTimeInEmployee').value = '';
+        }
+
+        // Open Time Out Modal
+        function openTimeOutModal(index) {
+            const onDutyRecords = JSON.parse(localStorage.getItem('onDutyRecords')) || [];
+            const record = onDutyRecords[index];
+            document.getElementById('timeOutEmployeeName').textContent = record.employeeName;
+            document.getElementById('timeOutEmployeeTime').value = '';
+            document.getElementById('timeOutModalIndex').value = index;
+            document.getElementById('timeOutModal').style.display = 'flex';
+        }
+
+        // Close Time Out Modal
+        function closeTimeOutModal() {
+            document.getElementById('timeOutModal').style.display = 'none';
+            document.getElementById('timeOutEmployeeTime').value = '';
+        }
+
+        // Submit Time Out
+        function submitTimeOut() {
+            const timeOut = document.getElementById('timeOutEmployeeTime').value;
+            const index = parseInt(document.getElementById('timeOutModalIndex').value);
+
+            if (!timeOut) {
+                showNotification('Missing Information', 'Please enter Time Out', 'warning');
+                return;
+            }
+
+            const onDutyRecords = JSON.parse(localStorage.getItem('onDutyRecords')) || [];
+            const record = onDutyRecords[index];
+            record.timeOut = timeOut;
+            
+            localStorage.setItem('onDutyRecords', JSON.stringify(onDutyRecords));
+
+            showNotification('Success', `${record.employeeName} timed out at ${timeOut}`, 'success');
+            closeTimeOutModal();
+            loadOnDutyTable();
+        }
+
+        // Submit On Duty Employee Form
+        function submitOnDutyEmployee() {
+            const selectedEmployee = document.querySelector('input[name="selectedEmployee"]:checked');
+            const timeIn = document.getElementById('onDutyTimeInEmployee').value;
+
+            if (!selectedEmployee) {
+                showNotification('Missing Information', 'Please select an employee', 'warning');
+                return;
+            }
+
+            if (!timeIn) {
+                showNotification('Missing Information', 'Please enter Time In', 'warning');
+                return;
+            }
+
+            const employeeName = selectedEmployee.value;
+
+            // Get today's date in MM/DD/YYYY format
+            const today = new Date();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const year = today.getFullYear();
+            const formattedDate = month + '/' + day + '/' + year;
+
+            // Add to on-duty records and save to localStorage
+            const onDutyRecords = JSON.parse(localStorage.getItem('onDutyRecords')) || [];
+            onDutyRecords.push({
+                employeeName: employeeName,
+                date: formattedDate,
+                timeIn: timeIn,
+                timeOut: ''
+            });
+            localStorage.setItem('onDutyRecords', JSON.stringify(onDutyRecords));
+
+            // Show confirmation message
+            showNotification('Success', `${employeeName} checked in at ${timeIn}`, 'success');
+            
+            closeOnDutyEmployeeModal();
+            loadOnDutyTable();
+        }
+
+        // Pagination variables
+        let allEmployees = [];
+        let currentPage = 1;
+        const employeesPerPage = 3;
+
+        // Load and display employee data
+        async function loadEmployeeTable() {
+            console.log('Starting loadEmployeeTable...');
+            const result = await getEmployees();
+            console.log('getEmployees result:', result);
+            console.log('Number of employees:', result.success ? result.data.length : 0);
+            
+            allEmployees = result.success ? result.data : [];
+            currentPage = 1;
+
+            if (allEmployees.length === 0) {
+                console.log('No employees found');
+                document.getElementById('employeeTableBody').innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #cbd5e1;"><i class="fas fa-inbox" style="font-size: 28px; display: block; margin-bottom: 10px;"></i>No employees found</td></tr>';
+                document.getElementById('employeePaginationTop').innerHTML = '';
+                return;
+            }
+
+            displayEmployeePage(1);
+            generatePaginationButtons();
+        }
+
+        // Display employees for a specific page
+        function displayEmployeePage(pageNum) {
+            const startIndex = (pageNum - 1) * employeesPerPage;
+            const endIndex = startIndex + employeesPerPage;
+            const pageEmployees = allEmployees.slice(startIndex, endIndex);
+
+            const tbody = document.getElementById('employeeTableBody');
+            tbody.innerHTML = '';
+
+            console.log(`Rendering page ${pageNum}, employees ${startIndex + 1} to ${Math.min(endIndex, allEmployees.length)}`);
+            
+            pageEmployees.forEach((employee) => {
+                console.log('Adding employee:', employee.firstname, employee.lastname, 'ID:', employee.id);
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-weight: 500; color: #0f172a;">${employee.lastname}</td>
+                        <td style="font-weight: 500; color: #0f172a;">${employee.firstname}</td>
+                        <td><span style="background-color: #e0e7ff; color: #3730a3; padding: 4px 8px; border-radius: 4px; font-size: 0.875rem;">${employee.position}</span></td>
+                        <td>${employee.contact_number}</td>
+                        <td style="text-align: center;">
+                            <button class="btn-view-details" onclick="viewEmployeeDetails('${employee.firstname} ${employee.lastname}', ${employee.id})" title="View Details">
+                                <i class="fas fa-eye"></i> View details
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Generate pagination buttons
+        function generatePaginationButtons() {
+            const totalPages = Math.ceil(allEmployees.length / employeesPerPage);
+            const paginationContainer = document.getElementById('employeePaginationTop');
+            
+            paginationContainer.innerHTML = '';
+
+            for (let i = 1; i <= totalPages; i++) {
+                const button = document.createElement('button');
+                button.className = `pagination-btn ${i === currentPage ? 'active' : ''}`;
+                button.textContent = i;
+                button.onclick = () => {
+                    currentPage = i;
+                    displayEmployeePage(i);
+                    updatePaginationButtons();
+                };
+                paginationContainer.appendChild(button);
+            }
+        }
+
+        // Update pagination button active state
+        function updatePaginationButtons() {
+            document.querySelectorAll('.pagination-btn').forEach((btn, index) => {
+                btn.classList.toggle('active', index + 1 === currentPage);
+            });
+        }
+
+        // Navigation function
+        function navigateTo(page) {
+            window.location.href = page;
+        }
+
+        // Logout function
+        function logout() {
+            document.getElementById('logoutModal').classList.add('active');
+        }
+
+        function confirmLogout() {
+            window.location.href = '../index.html';
+        }
+
+        function cancelLogout() {
+            document.getElementById('logoutModal').classList.remove('active');
+        }
+
+        // Open Add Employee Modal
+        function openAddEmployeeModal() {
+            document.getElementById('addEmployeeModal').style.display = 'flex';
+        }
+
+        // View Employee Details
+        function viewEmployeeDetails(employeeName, employeeId) {
+            const records = JSON.parse(localStorage.getItem('onDutyRecords')) || [];
+            const employeeRecords = records.filter(r => r.employeeName === employeeName).reverse();
+            
+            document.getElementById('employeeDetailsName').textContent = employeeName;
+            document.getElementById('employeeDetailsName').setAttribute('data-id', employeeId);
+            const tbody = document.getElementById('employeeDetailsTableBody');
+            tbody.innerHTML = '';
+            
+            if (employeeRecords.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #64748b; padding: 30px;">No duty records found</td></tr>';
+            } else {
+                employeeRecords.forEach((record) => {
+                    // Calculate over time hours and total hours duty
+                    let overTimeHours = 0;
+                    let totalHoursDuty = '--';
+                    
+                    if (record.timeIn && record.timeOut) {
+                        const [inHour, inMin] = record.timeIn.split(':').map(Number);
+                        const [outHour, outMin] = record.timeOut.split(':').map(Number);
+                        
+                        // Calculate total minutes worked
+                        const inTotalMin = inHour * 60 + inMin;
+                        const outTotalMin = outHour * 60 + outMin;
+                        const diffMin = outTotalMin - inTotalMin;
+                        
+                        // Convert back to hours and minutes
+                        const hours = Math.floor(diffMin / 60);
+                        const minutes = diffMin % 60;
+                        
+                        // Calculate total hours for overtime (in decimal)
+                        const totalHours = diffMin / 60;
+                        
+                        // Calculate overtime (hours worked - 8 required hours)
+                        overTimeHours = Math.max(0, totalHours - 8).toFixed(1);
+                        
+                        // Display total hours duty
+                        totalHoursDuty = `<span style="color: #0f172a; font-weight: 600;">${hours}h ${minutes}m</span>`;
+                    }
+                    
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${record.date}</td>
+                            <td>${record.timeIn}</td>
+                            <td>${record.timeOut || '--'}</td>
+                            <td style="text-align: center; font-weight: 600;">8 hours</td>
+                            <td style="text-align: center; font-weight: 600;">${overTimeHours} hour(s)</td>
+                            <td style="text-align: center;">${totalHoursDuty}</td>
+                        </tr>
+                    `;
+                });
+            }
+            
+            document.getElementById('viewEmployeeDetailsModal').style.display = 'flex';
+        }
+
+        // Close View Employee Details Modal
+        function closeViewEmployeeDetailsModal() {
+            document.getElementById('viewEmployeeDetailsModal').style.display = 'none';
+        }
+
+        // Remove Employee from system
+        async function removeEmployeeFromDutyHistory() {
+            const employeeDetailsName = document.getElementById('employeeDetailsName');
+            const employeeName = employeeDetailsName.textContent;
+            const employeeId = parseInt(employeeDetailsName.getAttribute('data-id'));
+            
+            console.log('Attempting to delete:', { employeeName, employeeId });
+            
+            // Store the employee data for confirmation
+            document.getElementById('deleteEmployeeName').textContent = employeeName;
+            document.getElementById('deleteEmployeeId').value = employeeId;
+            
+            // Show confirmation modal
+            document.getElementById('deleteEmployeeModal').classList.add('active');
+        }
+        
+        function cancelDeleteEmployee() {
+            document.getElementById('deleteEmployeeModal').classList.remove('active');
+        }
+        
+        async function confirmDeleteEmployee() {
+            const employeeId = parseInt(document.getElementById('deleteEmployeeId').value);
+            const employeeName = document.getElementById('deleteEmployeeName').textContent;
+            
+            try {
+                console.log('Calling deleteEmployee with ID:', employeeId);
+                // Delete from Supabase
+                const result = await deleteEmployee(employeeId);
+                console.log('Full delete result:', JSON.stringify(result));
+                
+                if (result && result.success) {
+                    console.log('Delete successful, closing modal...');
+                    // Close confirmation modal
+                    document.getElementById('deleteEmployeeModal').classList.remove('active');
+                    // Close details modal
+                    closeViewEmployeeDetailsModal();
+                    
+                    console.log('Reloading employee table...');
+                    // Reload table
+                    await loadEmployeeTable();
+                    console.log('Table reloaded - employee should be gone');
+                    
+                    showNotification('Success', `${employeeName} has been removed successfully`, 'success');
+                } else {
+                    console.error('Delete failed with result:', result);
+                    showNotification('Error', `Failed to delete employee: ${result?.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Exception during deletion:', error);
+                showNotification('Error', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Close Add Employee Modal
+        function closeAddEmployeeModal() {
+            document.getElementById('addEmployeeModal').style.display = 'none';
+            // Clear form fields
+            document.getElementById('employeeLastname').value = '';
+            document.getElementById('employeeFirstname').value = '';
+            document.getElementById('employeeContactNumber').value = '';
+            document.getElementById('employeePosition').value = '';
+        }
+
+        // Submit Add Employee Form
+        async function submitAddEmployee() {
+            const lastname = document.getElementById('employeeLastname').value.trim();
+            const firstname = document.getElementById('employeeFirstname').value.trim();
+            const contactNumber = document.getElementById('employeeContactNumber').value.trim();
+            const position = document.getElementById('employeePosition').value.trim();
+
+            if (!lastname || !firstname || !contactNumber || !position) {
+                showNotification('Missing Information', 'Please fill in all fields', 'warning');
+                return;
+            }
+
+            if (contactNumber.length !== 11) {
+                showNotification('Invalid Input', 'Contact number must be exactly 11 digits', 'warning');
+                return;
+            }
+
+            try {
+                const result = await createEmployee({
+                    lastname: lastname,
+                    firstname: firstname,
+                    contact_number: contactNumber,
+                    position: position
+                });
+
+                if (result.success) {
+                    showNotification('Success', `${firstname} ${lastname} has been added successfully!`, 'success');
+                    closeAddEmployeeModal();
+                    loadEmployeeTable();
+                } else {
+                    showNotification('Error', `Error adding employee: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showNotification('Error', `Error adding employee: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize on page load
+        // Authorization check function
+        function checkAuthorization() {
+            const userRole = localStorage.getItem('userRole');
+            
+            // If no user role is stored, redirect to login
+            if (!userRole) {
+                window.location.href = '../../index.html';
+                return false;
+            }
+            
+            // Check if user role is 'admin', if not, redirect to login
+            if (userRole !== 'admin') {
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('userName');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('currentEmployee');
+                window.location.href = '../../index.html';
+                return false;
+            }
+            
+            return true;
+        }
+
+        window.addEventListener('load', async () => {
+            // Check authorization first
+            if (!checkAuthorization()) return;
+            
+            await initSupabase();
+            
+            // Update time and date immediately and every second
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            loadEmployeeTable();
+            loadOnDutyTable();
+        });
+
+        // Notification Modal Functions
+        function showNotification(title, message, type = 'info') {
+            const iconMap = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+
+            document.getElementById('notificationIcon').className = `notification-icon ${type} fas ${iconMap[type]}`;
+            document.getElementById('notificationTitle').textContent = title;
+            document.getElementById('notificationMessage').textContent = message;
+            document.getElementById('notificationButton').className = `notification-button ${type}`;
+            document.getElementById('notificationModal').classList.add('active');
+        }
+
+        function closeNotification() {
+            document.getElementById('notificationModal').classList.remove('active');
+        }
+    </script>
+
+    <!-- Delete Employee Confirmation Modal -->
+    <div id="deleteEmployeeModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <i class="fas fa-trash"></i>
+            </div>
+            <div class="modal-title">Remove Employee</div>
+            <div class="modal-message">Are you sure you want to remove <span id="deleteEmployeeName" style="font-weight: 600; color: #0f172a;"></span>? This action cannot be undone.</div>
+            <input type="hidden" id="deleteEmployeeId" value="">
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="cancelDeleteEmployee()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmDeleteEmployee()">Remove</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div id="notificationModal" class="modal-overlay">
+        <div class="notification-modal-content">
+            <div id="notificationIcon" class="notification-icon"></div>
+            <div id="notificationTitle" class="notification-title"></div>
+            <div id="notificationMessage" class="notification-message"></div>
+            <button id="notificationButton" class="notification-button" onclick="closeNotification()">OK</button>
+        </div>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+            <div class="modal-title">Logout Confirmation</div>
+            <div class="modal-message">Are you sure you want to logout? You will need to log in again to access the dashboard.</div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="cancelLogout()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmLogout()">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete On-Duty Record Confirmation Modal -->
+    <div id="deleteOnDutyRecordModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="modal-title">Remove On-Duty Record</div>
+            <div class="modal-message">Are you sure you want to remove this on-duty record? This action cannot be undone.</div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="cancelDeleteOnDutyRecord()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmDeleteOnDutyRecord()">Remove</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

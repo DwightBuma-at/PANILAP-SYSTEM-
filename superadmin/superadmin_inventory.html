@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory - Panilap Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../database/config.js"></script>
+    <script src="../../database/services.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            display: flex;
+            overflow-x: hidden;
+        }
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .sidebar-title i {
+            color: #dc2626;
+            font-size: 20px;
+        }
+        .sidebar-nav {
+            padding: 12px;
+            flex: 1;
+        }
+        .nav-item {
+            padding: 12px 14px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            width: 100%;
+            text-align: left;
+            font-size: 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .nav-item.active {
+            background: #fee2e2;
+            color: #dc2626;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .logout-btn {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 10px 14px;
+            font-size: 16px;
+            width: 100%;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logout-btn:hover {
+            background: #fecaca;
+            color: #b91c1c;
+        }
+        /* Confirmation Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .modal-icon {
+            font-size: 48px;
+            color: #dc2626;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .modal-message {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 24px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        .modal-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-btn-cancel {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+        .modal-btn-cancel:hover {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .modal-btn-confirm {
+            background: #dc2626;
+            color: white;
+        }
+        .modal-btn-confirm:hover {
+            background: #b91c1c;
+        }
+        .notification-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease;
+        }
+        .notification-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .notification-icon.success {
+            color: #15803d;
+        }
+        .notification-icon.error {
+            color: #dc2626;
+        }
+        .notification-icon.warning {
+            color: #fbbf24;
+        }
+        .notification-icon.info {
+            color: #0284c7;
+        }
+        .notification-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .notification-message {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 24px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .notification-button {
+            width: 100%;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .notification-button.success {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .notification-button.success:hover {
+            background: #bbf7d0;
+        }
+        .notification-button.error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .notification-button.error:hover {
+            background: #fecaca;
+        }
+        .notification-button.warning {
+            background: #fef3c7;
+            color: #78350f;
+        }
+        .notification-button.warning:hover {
+            background: #fde68a;
+        }
+        .notification-button.info {
+            background: #dbeafe;
+            color: #0284c7;
+        }
+        .notification-button.info:hover {
+            background: #bfdbfe;
+        }
+        #notificationModal {
+            z-index: 3000 !important;
+        }
+        #clearActionLogsModal {
+            z-index: 4000 !important;
+        }
+        #removeItemsModal {
+            z-index: 4100 !important;
+        }
+        main {
+            position: fixed;
+            top: 0;
+            left: 320px;
+            right: 0;
+            bottom: 0;
+            width: calc(100% - 320px);
+            height: 100vh;
+            padding: 20px 30px 30px 30px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #f8fafc;
+        }
+        main > div {
+            flex-shrink: 0;
+        }
+        main > div:last-child {
+            flex: 1;
+            min-height: 0;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+        .page-subtitle {
+            font-size: 14px;
+            color: #64748b;
+        }
+        .datetime-display {
+            text-align: center;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        .current-date {
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            text-align: center;
+        }
+        .current-time {
+            font-size: 28px;
+            color: #0f172a;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+        .content-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: visible;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            display: flex;
+            flex-direction: column;
+            min-height: auto;
+        }
+        .content-card .data-table {
+            flex: 0 1 auto;
+        }
+        .content-title {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .content-title i {
+            color: #dc2626;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+            table-layout: auto;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .data-table thead {
+            background: #f8fafc;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        .data-table tbody {
+            display: block;
+            max-height: 400px;
+            overflow-y: auto;
+            width: 100%;
+            border-top: 1px solid #e2e8f0;
+        }
+        .data-table tbody::-webkit-scrollbar {
+            width: 6px;
+        }
+        .data-table tbody::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .data-table tbody::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .data-table thead th {
+            background: #f8fafc;
+            padding: 12px 20px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        .data-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s;
+        }
+        .data-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        .data-table td {
+            padding: 14px 20px;
+            font-size: 14px;
+            color: #475569;
+        }
+        /* Normal mode - 5 columns */
+        .data-table th:nth-child(1),
+        .data-table td:nth-child(1) {
+            width: 28%;
+        }
+        .data-table th:nth-child(2),
+        .data-table td:nth-child(2) {
+            width: 16%;
+            text-align: right;
+            padding-right: 20px;
+        }
+        .data-table th:nth-child(3),
+        .data-table td:nth-child(3) {
+            width: 16%;
+            text-align: center;
+        }
+        .data-table th:nth-child(4),
+        .data-table td:nth-child(4) {
+            width: 16%;
+            text-align: center;
+        }
+        .data-table th:nth-child(5),
+        .data-table td:nth-child(5) {
+            width: 24%;
+            text-align: center;
+        }
+        /* Edit mode styles - 6 columns */
+        body[data-edit-mode="true"] .data-table th:nth-child(1),
+        body[data-edit-mode="true"] .data-table td:nth-child(1) {
+            width: 6%;
+            text-align: center;
+        }
+        body[data-edit-mode="true"] .data-table th:nth-child(2),
+        body[data-edit-mode="true"] .data-table td:nth-child(2) {
+            width: 26%;
+        }
+        body[data-edit-mode="true"] .data-table th:nth-child(3),
+        body[data-edit-mode="true"] .data-table td:nth-child(3) {
+            width: 16%;
+            text-align: right;
+            padding-right: 20px;
+        }
+        body[data-edit-mode="true"] .data-table th:nth-child(4),
+        body[data-edit-mode="true"] .data-table td:nth-child(4) {
+            width: 16%;
+            text-align: center;
+        }
+        body[data-edit-mode="true"] .data-table th:nth-child(5),
+        body[data-edit-mode="true"] .data-table td:nth-child(5) {
+            width: 16%;
+            text-align: center;
+        }
+        body[data-edit-mode="true"] .data-table th:nth-child(6),
+        body[data-edit-mode="true"] .data-table td:nth-child(6) {
+            width: 20%;
+            text-align: center;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .badge-success {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .badge-danger {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .control-button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .btn-add {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .btn-add:hover {
+            background: #bbf7d0;
+            color: #166534;
+            transform: scale(1.05);
+        }
+        /* Modal Styles */
+        .modal {
+            display: none !important;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.2s ease;
+        }
+        .modal[style*="display: flex"],
+        .modal[style*="display:flex"] {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .modal-content.wide {
+            max-width: 1200px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #64748b;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .close-btn:hover {
+            color: #dc2626;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            flex-shrink: 0;
+        }
+        .btn-cancel {
+            padding: 10px 20px;
+            background: #f1f5f9;
+            color: #64748b;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-cancel:hover {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .btn-submit {
+            padding: 10px 20px;
+            background: #dcfce7;
+            color: #15803d;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-edit {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .btn-edit:hover {
+            background: #cbd5e1;
+            color: #334155;
+            transform: scale(1.05);
+        }
+        .btn-history {
+            background: #fef3c7;
+            color: #b45309;
+        }
+        .btn-history:hover {
+            background: #fde68a;
+            color: #92400e;
+            transform: scale(1.05);
+        }
+        .stock-in-btn {
+            background: #dbeafe;
+            color: #0284c7;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin: 0 auto;
+        }
+        .stock-in-btn:hover {
+            background: #bfdbfe;
+            color: #0369a1;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-tachometer-alt"></i>
+            <span class="sidebar-title">Admin</span>
+        </div>
+        
+        <div class="sidebar-nav">
+            <button class="nav-item" onclick="navigateTo('superadmin_dashboard.html')">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('superadmin_sales.html')">
+                <i class="fas fa-chart-line"></i>
+                <span>Sales</span>
+            </button>
+            <button class="nav-item active" onclick="navigateTo('superadmin_inventory.html')">
+                <i class="fas fa-boxes"></i>
+                <span>Inventory</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('superadmin_employee.html')">
+                <i class="fas fa-users"></i>
+                <span>Employee</span>
+            </button>
+        </div>
+
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </div>
+
+    <main>
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Inventory Management</h1>
+                <p class="page-subtitle">Manage menu items and stock levels</p>
+            </div>
+            <div class="datetime-display">
+                <div class="current-date" id="currentDate">-</div>
+                <div class="current-time" id="currentTime">--:--:--</div>
+            </div>
+        </div>
+
+        <!-- Inventory Table -->
+        <div class="content-card">
+            <div class="content-title">
+                <i class="fas fa-list"></i>
+                Menu Items & Inventory
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTable"></tbody>
+            </table>
+            
+            <!-- Controls -->
+            <div style="display: flex; align-items: center; gap: 12px; padding: 16px; border-top: 1px solid #e2e8f0;">
+                <button class="control-button btn-add" onclick="addItem()">
+                    <i class="fas fa-plus"></i> Add Item
+                </button>
+                <button class="control-button btn-edit" id="editBtn" onclick="toggleEditMode()">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="control-button btn-history" onclick="openActionHistoryModal()">
+                    <i class="fas fa-history"></i> Action History
+                </button>
+                <button class="control-button" id="removeBtn" style="background: #fee2e2; color: #dc2626; display: none;" onclick="removeSelectedItems()">
+                    <i class="fas fa-trash"></i> Remove Item
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Item Modal -->
+    <div id="addItemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Item</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="addItemForm" onsubmit="submitItem(event)">
+                <div class="form-group">
+                    <label for="itemName">Item Name *</label>
+                    <input type="text" id="itemName" name="itemName" required placeholder="e.g., Pork Sisig">
+                </div>
+                <div class="form-group">
+                    <label for="itemPrice">Price *</label>
+                    <input type="number" id="itemPrice" name="itemPrice" required placeholder="0.00" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="itemQuantity">Quantity *</label>
+                    <input type="number" id="itemQuantity" name="itemQuantity" required placeholder="0" min="0">
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn-submit">Add Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stock-In Modal -->
+    <div id="stockInModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Stock-In</h2>
+                <button class="close-btn" onclick="closeStockInModal()">&times;</button>
+            </div>
+            <form id="stockInForm" onsubmit="submitStockIn(event)">
+                <div class="form-group">
+                    <label for="stockInItemName">Item</label>
+                    <input type="text" id="stockInItemName" readonly style="background: #f1f5f9; cursor: not-allowed;">
+                </div>
+                <div class="form-group">
+                    <label for="stockInQuantity">Quantity to Add *</label>
+                    <input type="number" id="stockInQuantity" required placeholder="0" min="1">
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" onclick="closeStockInModal()">Cancel</button>
+                    <button type="submit" class="btn-submit">Add Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Action History Logs Modal -->
+    <div id="actionHistoryModal" class="modal">
+        <div class="modal-content wide">
+            <div class="modal-header">
+                <h2>Action History Logs</h2>
+                <button class="close-btn" onclick="closeActionHistoryModal()">&times;</button>
+            </div>
+            <div id="historyLogsContainer" style="flex: 1; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; min-height: 0;">
+                <div id="historyLogs" style="padding: 16px;">
+                    <p style="color: #94a3b8; text-align: center;">No action logs yet</p>
+                </div>
+            </div>
+            <div class="modal-buttons" style="margin-top: 20px; flex-shrink: 0;">
+                <button type="button" class="btn-cancel" onclick="clearActionLogs()">Clear Logs</button>
+                <button type="button" class="btn-cancel" onclick="closeActionHistoryModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+
+        function getDayName(dayIndex) {
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            return days[dayIndex];
+        }
+
+        function updateDateTime() {
+            try {
+                const now = new Date();
+                
+                const dayName = getDayName(now.getDay());
+                const monthName = now.toLocaleString('en-US', { month: 'long' });
+                const date = now.getDate().toString().padStart(2, '0');
+                const year = now.getFullYear();
+                
+                const dateStr = `${dayName}, ${monthName} ${date}, ${year}`;
+                
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                const timeStr = `${hours}:${minutes}:${seconds}`;
+                
+                const dateEl = document.getElementById('currentDate');
+                const timeEl = document.getElementById('currentTime');
+                
+                if (dateEl) dateEl.textContent = dateStr;
+                if (timeEl) timeEl.textContent = timeStr;
+            } catch (error) {
+                console.error('Error updating date/time:', error);
+            }
+        }
+
+        async function loadInventoryTable() {
+            const result = await getInventory();
+            const inventory = result.success ? result.data : [];
+            const table = document.getElementById('inventoryTable');
+            const thead = table.parentElement.querySelector('thead');
+            const editMode = document.body.getAttribute('data-edit-mode') === 'true';
+            
+            table.innerHTML = '';
+            
+            // Update header for edit mode
+            if (editMode) {
+                thead.innerHTML = `
+                    <tr>
+                        <th><input type="checkbox" id="selectAllCheckbox" style="cursor: pointer; width: 18px; height: 18px;" onchange="selectAllItems(this)"></th>
+                        <th>Item Name</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                `;
+            } else {
+                thead.innerHTML = `
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                `;
+            }
+            
+            if (inventory.length === 0) {
+                table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #cbd5e1;"><i class="fas fa-inbox" style="font-size: 28px; display: block; margin-bottom: 10px;"></i> No inventory data</td></tr>';
+                return;
+            }
+            
+            inventory.forEach((item, index) => {
+                try {
+                    const row = document.createElement('tr');
+                    const status = (item.quantity || 0) > 30 ? 'In Stock' : 'Low Stock';
+                    const statusClass = (item.quantity || 0) > 30 ? 'badge-success' : 'badge-danger';
+                    const price = typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0;
+                    const quantity = typeof item.quantity === 'number' ? item.quantity : parseInt(item.quantity) || 0;
+                    
+                    let rowHtml = '';
+                    if (editMode) {
+                        rowHtml = `
+                            <td><input type="checkbox" class="item-checkbox" data-index="${index}" data-id="${item.id}" style="cursor: pointer; width: 18px; height: 18px;"></td>
+                            <td style="font-weight: 500;">${item.name || 'Unknown'}</td>
+                            <td>₱${price.toLocaleString('en-PH')}</td>
+                            <td style="font-weight: 600;">${quantity}</td>
+                            <td><span class="badge ${statusClass}">${status}</span></td>
+                            <td><button class="stock-in-btn" onclick="openStockInModal(${item.id}, '${item.name}')"><i class="fas fa-plus"></i> Stock-In</button></td>
+                        `;
+                    } else {
+                        rowHtml = `
+                            <td style="font-weight: 500;">${item.name || 'Unknown'}</td>
+                            <td>₱${price.toLocaleString('en-PH')}</td>
+                            <td style="font-weight: 600;">${quantity}</td>
+                            <td><span class="badge ${statusClass}">${status}</span></td>
+                            <td><button class="stock-in-btn" onclick="openStockInModal(${item.id}, '${item.name}')"><i class="fas fa-plus"></i> Stock-In</button></td>
+                        `;
+                    }
+                    
+                    row.innerHTML = rowHtml;
+                    table.appendChild(row);
+                } catch (error) {
+                    console.error('Error rendering item:', item, error);
+                }
+            });
+        }
+
+        function selectAllItems(checkbox) {
+            const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+            itemCheckboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+        }
+
+        function addItem() {
+            document.getElementById('addItemModal').style.display = 'flex';
+            document.getElementById('addItemForm').reset();
+        }
+
+        function toggleEditMode() {
+            const editMode = document.body.getAttribute('data-edit-mode') === 'true';
+            const newMode = !editMode;
+            
+            document.body.setAttribute('data-edit-mode', newMode);
+            document.getElementById('removeBtn').style.display = newMode ? 'block' : 'none';
+            document.getElementById('editBtn').style.opacity = newMode ? '0.7' : '1';
+            
+            loadInventoryTable();
+        }
+
+        async function removeSelectedItems() {
+            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            
+            if (checkboxes.length === 0) {
+                showNotification('No Selection', 'Please select items to remove.', 'warning');
+                return;
+            }
+            
+            // Store count and open modal
+            window.itemsToRemove = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-id')));
+            const message = 'Are you sure you want to remove ' + window.itemsToRemove.length + ' item(s)? This action cannot be undone.';
+            document.getElementById('removeItemsModalMessage').innerText = message;
+            document.getElementById('removeItemsModal').classList.add('active');
+        }
+
+        function cancelRemoveItems() {
+            document.getElementById('removeItemsModal').classList.remove('active');
+            window.itemsToRemove = null;
+        }
+
+        async function confirmRemoveItems() {
+            try {
+                const itemIds = window.itemsToRemove;
+                
+                // Get inventory data to log item names and quantities
+                const inventoryResult = await getInventory();
+                const inventory = inventoryResult.success ? inventoryResult.data : [];
+                
+                // Delete each item from Supabase
+                for (const itemId of itemIds) {
+                    // Find item to get name and quantity for logging
+                    const item = inventory.find(i => i.id === itemId);
+                    const itemName = item ? item.name : 'Unknown Item';
+                    const itemQuantity = item ? item.quantity : 0;
+                    
+                    const result = await deleteInventoryItem(itemId);
+                    if (!result.success) {
+                        showNotification('Error', 'Error removing item: ' + result.message, 'error');
+                        document.getElementById('removeItemsModal').classList.remove('active');
+                        return;
+                    }
+                    
+                    // Log the remove-item action
+                    await logAction('remove-item', itemName, itemQuantity, itemQuantity, 0);
+                }
+                
+                showNotification('Success', itemIds.length + ' item(s) removed successfully!', 'success');
+                document.getElementById('removeItemsModal').classList.remove('active');
+                loadInventoryTable();
+                
+                // Exit edit mode after removal
+                const editMode = document.body.getAttribute('data-edit-mode') === 'true';
+                if (editMode) {
+                    toggleEditMode();
+                }
+            } catch (error) {
+                showNotification('Error', 'Error removing items: ' + error.message, 'error');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('addItemModal').style.display = 'none';
+        }
+
+        function openStockInModal(itemId, itemName) {
+            document.getElementById('stockInItemName').value = itemName;
+            document.getElementById('stockInQuantity').value = '';
+            document.getElementById('stockInModal').style.display = 'flex';
+            document.getElementById('stockInQuantity').focus();
+            window.currentStockInItemId = itemId;
+        }
+
+        function closeStockInModal() {
+            document.getElementById('stockInModal').style.display = 'none';
+            window.currentStockInItemId = null;
+        }
+
+        async function submitStockIn(event) {
+            event.preventDefault();
+            
+            const quantity = parseInt(document.getElementById('stockInQuantity').value);
+            const itemName = document.getElementById('stockInItemName').value;
+            const itemId = window.currentStockInItemId;
+            
+            if (isNaN(quantity) || quantity < 1) {
+                showNotification('Invalid Input', 'Please enter a valid quantity', 'warning');
+                return;
+            }
+
+            try {
+                // Get current item to get current quantity
+                const result = await getInventory();
+                const inventory = result.success ? result.data : [];
+                const item = inventory.find(i => i.id === itemId);
+                
+                if (!item) {
+                    showNotification('Not Found', 'Item not found', 'error');
+                    return;
+                }
+
+                const newQuantity = item.quantity + quantity;
+                const updateResult = await updateInventoryItem(itemId, {
+                    quantity: newQuantity,
+                    status: newQuantity > 30 ? 'In Stock' : 'Low Stock'
+                });
+
+                if (updateResult.success) {
+                    // Log the stock-in action
+                    await logAction('stock-in', itemName, quantity, item.quantity, newQuantity);
+                    showNotification('Success', `Successfully added ${quantity} units to ${itemName}`, 'success');
+                    closeStockInModal();
+                    loadInventoryTable();
+                } else {
+                    showNotification('Error', 'Error updating stock: ' + updateResult.message, 'error');
+                }
+            } catch (error) {
+                showNotification('Error', 'Error updating stock: ' + error.message, 'error');
+            }
+        }
+
+        function openActionHistoryModal() {
+            document.getElementById('actionHistoryModal').style.display = 'flex';
+            loadActionHistoryLogs();
+        }
+
+        function closeActionHistoryModal() {
+            document.getElementById('actionHistoryModal').style.display = 'none';
+        }
+
+        async function logAction(actionType, itemName, quantityChanged, previousQuantity = null, remainingQuantity = null) {
+            // Log to Supabase instead of localStorage
+            const result = await logActionToSupabase(actionType, itemName, quantityChanged, previousQuantity, remainingQuantity);
+            if (!result.success) {
+                console.error('Error logging action:', result.message);
+            }
+        }
+
+        async function loadActionHistoryLogs() {
+            // Load from Supabase instead of localStorage
+            const result = await getActionLogs(100);
+            const logs = result.success ? result.data : [];
+            const container = document.getElementById('historyLogs');
+            
+            if (logs.length === 0) {
+                container.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;">No action logs yet</p>';
+                return;
+            }
+            
+            let html = `
+                <div style="padding: 0;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead style="position: sticky; top: 0; z-index: 10;">
+                            <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                                <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #475569; font-size: 12px; text-transform: uppercase; width: 20%;">Date/Time</th>
+                                <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #475569; font-size: 12px; text-transform: uppercase; width: 25%;">Item Name</th>
+                                <th style="padding: 12px 16px; text-align: center; font-weight: 600; color: #475569; font-size: 12px; text-transform: uppercase; width: 35%;">Quantity Details</th>
+                                <th style="padding: 12px 16px; text-align: center; font-weight: 600; color: #475569; font-size: 12px; text-transform: uppercase; width: 20%;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            // Display logs (already ordered newest first from database)
+            logs.forEach((log) => {
+                let actionBadge = '';
+                let actionColor = '';
+                let badgeTextColor = '';
+                let quantityDetails = '';
+                
+                if (log.type === 'add-item') {
+                    actionBadge = '🟢 New Item Added';
+                    actionColor = '#dcfce7';
+                    badgeTextColor = '#15803d';
+                    quantityDetails = `<span style="font-weight: 600; color: #15803d;">+${log.quantity_changed}</span> units (new)`;
+                } else if (log.type === 'stock-in') {
+                    actionBadge = '🔵 Stock In Items';
+                    actionColor = '#dbeafe';
+                    badgeTextColor = '#0284c7';
+                    quantityDetails = `<span style="font-weight: 600; color: #059669;">+${log.quantity_changed}</span> items`;
+                } else if (log.type === 'remove-item') {
+                    actionBadge = '🔴 Item Removed by Admin';
+                    actionColor = '#fee2e2';
+                    badgeTextColor = '#dc2626';
+                    quantityDetails = `<span style="font-weight: 600; color: #dc2626;">-${log.quantity_changed}</span> items`;
+                } else if (log.type === 'sales') {
+                    actionBadge = '🟣 Customer Order';
+                    actionColor = '#ede9fe';
+                    badgeTextColor = '#7c3aed';
+                    quantityDetails = `<span style="font-weight: 600; color: #7c3aed;">-${log.quantity_changed}</span> items sold`;
+                } else {
+                    return;
+                }
+                
+                html += `
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 12px 16px; font-size: 13px; color: #475569;">${log.timestamp}</td>
+                        <td style="padding: 12px 16px; font-size: 13px; color: #0f172a; font-weight: 500;">${log.item_name}</td>
+                        <td style="padding: 12px 16px; font-size: 13px; color: #475569; text-align: center;">${quantityDetails}</td>
+                        <td style="padding: 12px 16px; text-align: center;">
+                            <span style="display: inline-block; background: ${actionColor}; color: ${badgeTextColor}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">${actionBadge}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        function clearActionLogs() {
+            document.getElementById('clearActionLogsModal').classList.add('active');
+        }
+
+        function cancelClearActionLogs() {
+            document.getElementById('clearActionLogsModal').classList.remove('active');
+        }
+
+        function confirmClearActionLogs() {
+            localStorage.removeItem('actionLogs');
+            loadActionHistoryLogs();
+            document.getElementById('clearActionLogsModal').classList.remove('active');
+            showNotification('Success', 'All action logs have been cleared', 'success');
+        }
+
+        // Function to log sales/deductions (call this from sales page when items are sold)
+        function logSalesDeduction(itemName, quantityDeducted, previousQuantity, remainingQuantity) {
+            logAction('sales', itemName, quantityDeducted, previousQuantity, remainingQuantity);
+        }
+
+        function submitItem(event) {
+            event.preventDefault();
+            
+            const itemName = document.getElementById('itemName').value.trim();
+            const itemPriceInput = document.getElementById('itemPrice').value;
+            const itemQuantityInput = document.getElementById('itemQuantity').value;
+            
+            if (!itemName || itemPriceInput === '' || itemQuantityInput === '') {
+                showNotification('Missing Fields', 'Please fill in all fields.', 'warning');
+                return;
+            }
+            
+            const itemPrice = parseFloat(itemPriceInput);
+            const itemQuantity = parseInt(itemQuantityInput);
+            
+            if (isNaN(itemPrice) || isNaN(itemQuantity)) {
+                showNotification('Invalid Input', 'Price and Quantity must be numbers.', 'warning');
+                return;
+            }
+            
+            addItemToSupabase(itemName, itemPrice, itemQuantity);
+        }
+
+        async function addItemToSupabase(itemName, itemPrice, itemQuantity) {
+            try {
+                const result = await createInventoryItem({
+                    name: itemName,
+                    category: 'Other',
+                    price: itemPrice,
+                    quantity: itemQuantity,
+                    status: itemQuantity > 30 ? 'In Stock' : 'Low Stock'
+                });
+
+                if (result.success) {
+                    // Log the add-item action
+                    await logAction('add-item', itemName, itemQuantity, 0, itemQuantity);
+                    showNotification('Success', 'Item added successfully!', 'success');
+                    loadInventoryTable();
+                    closeModal();
+                    document.getElementById('addItemForm').reset();
+                } else {
+                    showNotification('Error', 'Error adding item: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showNotification('Error', 'Error adding item: ' + error.message, 'error');
+            }
+        }
+
+        window.onclick = function(event) {
+            const addItemModal = document.getElementById('addItemModal');
+            const stockInModal = document.getElementById('stockInModal');
+            const actionHistoryModal = document.getElementById('actionHistoryModal');
+            
+            if (event.target == addItemModal) {
+                addItemModal.style.display = 'none';
+            }
+            if (event.target == stockInModal) {
+                stockInModal.style.display = 'none';
+            }
+            if (event.target == actionHistoryModal) {
+                actionHistoryModal.style.display = 'none';
+            }
+        }
+
+        function navigateTo(page) {
+            window.location.href = page;
+        }
+
+        function logout() {
+            document.getElementById('logoutModal').classList.add('active');
+        }
+
+        function confirmLogout() {
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
+            window.location.href = '../index.html';
+        }
+
+        function cancelLogout() {
+            document.getElementById('logoutModal').classList.remove('active');
+        }
+
+        // Notification Modal Functions
+        function showNotification(title, message, type = 'info') {
+            const iconMap = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+
+            document.getElementById('notificationIcon').className = `notification-icon ${type} fas ${iconMap[type]}`;
+            document.getElementById('notificationTitle').textContent = title;
+            document.getElementById('notificationMessage').textContent = message;
+            document.getElementById('notificationButton').className = `notification-button ${type}`;
+            document.getElementById('notificationModal').classList.add('active');
+        }
+
+        function closeNotification() {
+            document.getElementById('notificationModal').classList.remove('active');
+        }
+
+        function cancelClearActionLogs() {
+            document.getElementById('clearActionLogsModal').classList.remove('active');
+        }
+
+        async function confirmClearActionLogs() {
+            const result = await clearActionLogs();
+            if (result.success) {
+                showNotification('Success', 'Action logs cleared successfully!', 'success');
+                document.getElementById('clearActionLogsModal').classList.remove('active');
+                loadActionHistoryLogs();
+            } else {
+                showNotification('Error', 'Error clearing logs: ' + result.message, 'error');
+            }
+        }
+
+        function openClearActionLogsModal() {
+            document.getElementById('clearActionLogsModal').classList.add('active');
+        }
+
+        // Authorization check function
+        function checkAuthorization() {
+            const userRole = localStorage.getItem('userRole');
+            
+            // If no user role is stored, redirect to login
+            if (!userRole) {
+                window.location.href = '../../index.html';
+                return false;
+            }
+            
+            // Check if user role is 'admin', if not, redirect to login
+            if (userRole !== 'admin') {
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('userName');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('currentEmployee');
+                window.location.href = '../../index.html';
+                return false;
+            }
+            
+            return true;
+        }
+
+        window.addEventListener('load', async () => {
+            // Check authorization first
+            if (!checkAuthorization()) return;
+            
+            await initSupabase();
+            
+            // Update time and date immediately and every second
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            if (localStorage.getItem('userRole')) {
+                loadInventoryTable();
+            }
+        });
+    </script>
+
+    <!-- Notification Modal -->
+    <div id="notificationModal" class="modal-overlay">
+        <div class="notification-modal-content">
+            <div id="notificationIcon" class="notification-icon"></div>
+            <div id="notificationTitle" class="notification-title"></div>
+            <div id="notificationMessage" class="notification-message"></div>
+            <button id="notificationButton" class="notification-button" onclick="closeNotification()">OK</button>
+        </div>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+            <div class="modal-title">Logout Confirmation</div>
+            <div class="modal-message">Are you sure you want to logout? You will need to log in again to access the dashboard.</div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="cancelLogout()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmLogout()">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear Action Logs Confirmation Modal -->
+    <div id="clearActionLogsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="modal-title">Clear Action Logs</div>
+            <div class="modal-message">Are you sure you want to clear all action logs? This action cannot be undone.</div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="cancelClearActionLogs()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmClearActionLogs()">Clear Logs</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remove Items Confirmation Modal -->
+    <div id="removeItemsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="modal-title">Remove Items</div>
+            <div class="modal-message" id="removeItemsModalMessage">Are you sure you want to remove items? This action cannot be undone.</div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="cancelRemoveItems()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmRemoveItems()">Remove Items</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
