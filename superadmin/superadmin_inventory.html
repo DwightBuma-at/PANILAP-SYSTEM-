@@ -868,8 +868,12 @@
         }
 
         async function loadInventoryTable() {
+            console.log('[Inventory] Loading inventory table...');
             const result = await getInventory();
+            console.log('[Inventory] Result:', result);
+            console.log('[Inventory] Data:', result.data);
             const inventory = result.success ? result.data : [];
+            console.log('[Inventory] Found', inventory.length, 'items');
             const table = document.getElementById('inventoryTable');
             const thead = table.parentElement.querySelector('thead');
             const editMode = document.body.getAttribute('data-edit-mode') === 'true';
@@ -1350,15 +1354,25 @@
             if (!checkAuthorization()) return;
             
             // Initialize Supabase with retry logic
+            console.log('[Inventory] Initializing Supabase...');
             const supabaseInstance = await initSupabase();
             if (!supabaseInstance) {
-                console.error('Failed to connect to database');
+                console.error('[Inventory] Failed to connect to database');
+                const table = document.getElementById('inventoryTable');
+                if (table) {
+                    table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #ef4444;">Database connection error. Please refresh the page.</td></tr>';
+                }
                 return;
             }
             
-            if (localStorage.getItem('userRole')) {
-                loadInventoryTable();
-            }
+            console.log('[Inventory] Supabase initialized successfully');
+            
+            // Add small delay to ensure all initialization is complete
+            setTimeout(() => {
+                if (localStorage.getItem('userRole')) {
+                    loadInventoryTable();
+                }
+            }, 500);
         });
     </script>
 
