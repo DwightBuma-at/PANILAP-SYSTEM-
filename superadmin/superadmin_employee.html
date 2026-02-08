@@ -1259,6 +1259,13 @@
 
         // Load and display employee data
         async function loadEmployeeTable() {
+            // Ensure Supabase is initialized
+            if (!window.supabaseInstance) {
+                console.error('Supabase not initialized');
+                document.getElementById('employeeTableBody').innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #dc2626;"><i class="fas fa-exclamation-triangle" style="font-size: 28px; display: block; margin-bottom: 10px;"></i>Database connection error. Please refresh the page.</td></tr>';
+                return;
+            }
+
             console.log('Starting loadEmployeeTable...');
             const result = await getEmployees();
             console.log('getEmployees result:', result);
@@ -1496,6 +1503,12 @@
 
             if (contactNumber.length !== 11) {
                 showNotification('Invalid Input', 'Contact number must be exactly 11 digits', 'warning');
+                return;
+            }
+
+            // Ensure Supabase is initialized
+            if (!window.supabaseInstance) {
+                showNotification('Error', 'Database connection not initialized. Please refresh the page.', 'error');
                 return;
             }
 
