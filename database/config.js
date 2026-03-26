@@ -13,7 +13,7 @@ async function waitForSupabaseLib(maxAttempts = 100) {
         let attempts = 0;
         const checkInterval = setInterval(() => {
             attempts++;
-            console.log([Supabase] Checking for library... attempt /);
+            console.log(`[Supabase] Checking for library... attempt ${attempts}`);
             
             if (window.supabase && window.supabase.createClient) {
                 console.log('[Supabase] Library loaded successfully');
